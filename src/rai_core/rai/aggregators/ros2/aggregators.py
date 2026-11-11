@@ -21,9 +21,9 @@ from rcl_interfaces.msg import Log
 from sensor_msgs.msg import CompressedImage, Image
 
 from rai.aggregators import BaseAggregator
-from rai.communication.ros2.api import convert_ros_img_to_base64
+from rai.communication.ros2.images import encode_image
 from rai.llm import get_llm
-from rai.messages import HumanMultimodalMessage
+from rai.messages import human
 
 
 class ROS2LogsAggregator(BaseAggregator[Log]):
@@ -54,16 +54,16 @@ class ROS2LogsAggregator(BaseAggregator[Log]):
 
 
 class ROS2GetLastImageAggregator(BaseAggregator[Image | CompressedImage]):
-    """Returns the last image from the buffer as base64 encoded string"""
+    """Returns the last image from the buffer"""
 
-    def get(self) -> HumanMultimodalMessage | None:
+    def get(self) -> HumanMessage | None:
         msgs = self.get_buffer()
         if len(msgs) == 0:
             return None
         ros2_img = msgs[-1]
-        b64_image = convert_ros_img_to_base64(ros2_img)
+        b64_image = encode_image(ros2_img)
         self.clear_buffer()
-        return HumanMultimodalMessage(content="", images=[b64_image])
+        return human(images=[b64_image])
 
 
 class ROS2ImgVLMDescriptionAggregator(BaseAggregator[Image | CompressedImage]):
@@ -87,7 +87,7 @@ class ROS2ImgVLMDescriptionAggregator(BaseAggregator[Image | CompressedImage]):
         if len(msgs) == 0:
             return None
 
-        b64_images: List[str] = [convert_ros_img_to_base64(msg) for msg in msgs]
+        b64_image = encode_image(msgs[-1])
         self.clear_buffer()
 
         class ROS2ImgDescription(BaseModel):
@@ -97,9 +97,9 @@ class ROS2ImgVLMDescriptionAggregator(BaseAggregator[Image | CompressedImage]):
 
         task = [
             SystemMessage(content=self.SYSTEM_PROMPT),
-            HumanMultimodalMessage(
-                content="Describe key elements that are currently in robot's view",
-                images=[b64_images[-1]],
+            human(
+                "Describe key elements that are currently in robot's view",
+                [b64_image],
             ),
         ]
         llm = self.llm.with_structured_output(ROS2ImgDescription)
@@ -141,12 +141,9 @@ class ROS2ImgVLMDiffAggregator(BaseAggregator[Image | CompressedImage]):
         if len(msgs) == 0:
             return None
 
-        b64_images = [convert_ros_img_to_base64(msg) for msg in msgs]
-        original_count = len(b64_images)
-
+        original_count = len(msgs)
+        b64_images = [encode_image(msg) for msg in self.get_key_elements(msgs)]
         self.clear_buffer()
-
-        b64_images = self.get_key_elements(b64_images)
 
         class ROS2ImgDiffOutput(BaseModel):
             are_different: bool = Field(
@@ -158,9 +155,9 @@ class ROS2ImgVLMDiffAggregator(BaseAggregator[Image | CompressedImage]):
 
         task = [
             SystemMessage(content=self.SYSTEM_PROMPT),
-            HumanMultimodalMessage(
-                content="Here are max 3 subsequent images from the robot camera. Robot might be moving. Outline key differences in robot's view.",
-                images=b64_images,
+            human(
+                "Here are max 3 subsequent images from the robot camera. Robot might be moving. Outline key differences in robot's view.",
+                b64_images,
             ),
         ]
         llm = self.llm.with_structured_output(ROS2ImgDiffOutput)

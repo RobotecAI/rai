@@ -13,33 +13,15 @@
 # limitations under the License.
 
 
-from langchain_core.messages import (
-    AIMessage,
-    HumanMessage,
-    SystemMessage,
-    ToolMessage,
-)
+"""The LLM boundary: RAI content (:mod:`rai.content`) to LangChain content
+blocks and back, and helpers that build model requests."""
 
 from .artifacts import MultimodalArtifact
 from .blocks import from_blocks, human, to_blocks, with_tool_images
 from .conversion import preprocess_image
-from .multimodal import (
-    AIMultimodalMessage,
-    HumanMultimodalMessage,
-    MultimodalMessage,
-    SystemMultimodalMessage,
-)
 
 __all__ = [
-    "AIMessage",
-    "AIMultimodalMessage",
-    "HumanMessage",
-    "HumanMultimodalMessage",
     "MultimodalArtifact",
-    "MultimodalMessage",
-    "SystemMessage",
-    "SystemMultimodalMessage",
-    "ToolMessage",
     "from_blocks",
     "human",
     "preprocess_image",

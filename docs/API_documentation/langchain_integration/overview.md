@@ -38,12 +38,9 @@ agent.invoke({"messages": [HumanMessage(content="Analyze this image")]})
 ### Multimodal Communication
 
 ```python
-from rai.messages import HumanMultimodalMessage, preprocess_image
+from rai.messages import human, preprocess_image
 
-message = HumanMultimodalMessage(
-    content="Analyze this image",
-    images=[preprocess_image(image_uri)]
-)
+message = human("Analyze this image", [preprocess_image(image_uri)])
 ```
 
 ### Tool Integration

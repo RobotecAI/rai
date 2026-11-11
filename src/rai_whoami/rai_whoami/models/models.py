@@ -27,10 +27,10 @@ from langchain_community.document_loaders import (
     TextLoader,
 )
 from langchain_core.documents import Document
+from langchain_core.messages import SystemMessage
 from PIL import Image
 from pydantic import BaseModel, Field
-from rai.messages import preprocess_image
-from rai.messages.multimodal import SystemMultimodalMessage
+from rai.messages import human, preprocess_image
 
 
 class EmbodimentInfoDirectoryStructure(Enum):
@@ -187,14 +187,14 @@ class EmbodimentInfo(BaseModel):
 
     def to_langchain(
         self, style: Literal["xml_tags", "markdown"] = "xml_tags"
-    ) -> SystemMultimodalMessage:
+    ) -> SystemMessage:
         if style == "xml_tags":
             content = self._to_xml()
         elif style == "markdown":
             content = self._to_markdown()
         else:
             raise ValueError(f"Invalid style: {style}")
-        return SystemMultimodalMessage(content=content, images=self.images)
+        return SystemMessage(human(content, self.images or ()).content)
 
     def _to_xml(self) -> str:
         content = f"<description>\n{self.description}\n</description>\n"

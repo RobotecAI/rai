@@ -35,8 +35,7 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import create_react_agent
 from langgraph.types import Command
 from pydantic import BaseModel, Field
-
-from rai.messages import HumanMultimodalMessage, with_tool_images
+from rai.messages import with_tool_images
 from rai.tools import RaiTool, from_langchain
 
 
@@ -219,7 +218,7 @@ def get_initial_megamind_state(task: str):
     return MegamindState(
         {
             "original_task": task,
-            "messages": [HumanMultimodalMessage(content=task)],
+            "messages": [HumanMessage(task)],
             "step": "",
             "steps_done": [],
             "step_success": StepSuccess(success=False, explanation=""),
@@ -268,7 +267,7 @@ def plan_step(
         prompts = PlanPrompts.default()
 
     if "original_task" not in state:
-        state["original_task"] = state["messages"][0].content[0]["text"]
+        state["original_task"] = state["messages"][0].text
     if "steps_done" not in state:
         state["steps_done"] = []
     if "step" not in state:
@@ -303,7 +302,7 @@ def plan_step(
     megamind_prompt += prompts.completion_prompt
 
     messages = [
-        HumanMultimodalMessage(content=megamind_prompt),
+        HumanMessage(megamind_prompt),
     ]
 
     # NOTE (jmatejcz) the response of megamind isnt appended to messages

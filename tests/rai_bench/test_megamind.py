@@ -21,6 +21,7 @@ from langchain_core.messages import (
     SystemMessage,
 )
 from langchain_core.tools import tool
+
 from rai_bench.megamind import (
     ContextProvider,
     Executor,
@@ -35,7 +36,6 @@ from rai_bench.megamind import (
     plan_step,
     should_continue_or_structure,
 )
-from rai.messages import HumanMultimodalMessage
 
 
 @pytest.fixture
@@ -134,7 +134,7 @@ def test_should_continue_or_structure(default_state):
 def test_plan_step(mock_llm, default_state):
     default_state.update(
         {
-            "messages": [HumanMultimodalMessage(content="task")],
+            "messages": [HumanMessage("task")],
             "steps_done": ["step 1 done"],
             "step": "step 1",
             "step_success": StepSuccess(success=True, explanation="ok"),
@@ -164,7 +164,7 @@ def test_plan_prompts():
 
 
 def test_plan_step_edge_cases(mock_llm, default_state):
-    default_state["messages"] = [HumanMultimodalMessage(content="task")]
+    default_state["messages"] = [HumanMessage("task")]
     default_state["step"] = None  # To trigger "first_step_prompt" path
     mock_llm.invoke.return_value = AIMessage(content="ok")
 
@@ -176,7 +176,7 @@ def test_plan_step_edge_cases(mock_llm, default_state):
     )
 
     args, _ = mock_llm.invoke.call_args
-    prompt_content = args[0]["messages"][0].content[0]["text"]
+    prompt_content = args[0]["messages"][0].text
     assert "Extra context" in prompt_content
 
     # step defined but success missing
@@ -186,7 +186,7 @@ def test_plan_step_edge_cases(mock_llm, default_state):
         plan_step(mock_llm, default_state)
 
     # missing keys initialization
-    empty_state: MegamindState = {"messages": [HumanMultimodalMessage(content="Start")]}
+    empty_state: MegamindState = {"messages": [HumanMessage("Start")]}
     plan_step(mock_llm, empty_state)
     assert empty_state["original_task"] == "Start"
     assert empty_state["steps_done"] == []
@@ -197,7 +197,7 @@ def test_get_initial_megamind_state():
     state = get_initial_megamind_state("My Task")
     assert state["original_task"] == "My Task"
     assert len(state["messages"]) == 1
-    assert state["messages"][0].content == [{"text": "My Task", "type": "text"}]
+    assert state["messages"][0].content == "My Task"
     assert state["steps_done"] == []
 
 

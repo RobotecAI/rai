@@ -15,8 +15,8 @@
 from typing import Optional, cast
 
 from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import HumanMessage, SystemMessage
 from rai.llm import get_llm
-from rai.messages import HumanMessage, SystemMessage
 
 from rai_whoami.models import EmbodimentInfo
 

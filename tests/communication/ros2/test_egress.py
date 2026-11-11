@@ -30,7 +30,6 @@ from geometry_msgs.msg import Twist, TwistStamped
 from rai.communication.ros2 import (
     ROS2Connector,
     ROS2HRIConnector,
-    ROS2HRIMessage,
     ROS2Message,
 )
 from rai.communication.ros2 import runtime as runtime_module
@@ -170,9 +169,7 @@ def test_hri_publish_is_gated(ros_setup: None) -> None:
     try:
         hook = runtime.egress.add(Recorder(Deny("quiet")))
         with pytest.raises(EgressDenied, match="quiet"):
-            hri.send_message(
-                ROS2HRIMessage(text="hi", message_author="ai"), "/to_human"
-            )
+            hri.sync.send("/to_human", "hi")
         assert hook.seen[0].type == "rai_interfaces/msg/HRIMessage"
     finally:
         hri.close()

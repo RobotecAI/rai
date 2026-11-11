@@ -24,7 +24,7 @@ from langchain_core.runnables.config import RunnableConfig
 from langgraph.errors import GraphRecursionError
 from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel
-from rai.messages import HumanMultimodalMessage
+from rai.messages import human
 
 from rai_bench.base_benchmark import BaseBenchmark, RunSummary, TimeoutException
 from rai_bench.results_processing.langfuse_scores_tracing import ScoreTracingHandler
@@ -102,13 +102,7 @@ class VLMBenchmark(BaseBenchmark):
         try:
             with self.time_limit(60):
                 for state in agent.stream(
-                    {
-                        "messages": [
-                            HumanMultimodalMessage(
-                                content=task.get_prompt(), images=task.get_images()
-                            )
-                        ]
-                    },
+                    {"messages": [human(task.get_prompt(), task.get_images())]},
                     config=config,
                 ):
                     node = next(iter(state))

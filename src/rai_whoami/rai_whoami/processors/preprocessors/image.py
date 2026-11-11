@@ -15,8 +15,9 @@
 from typing import Optional
 
 from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import SystemMessage
 from rai.llm import get_llm
-from rai.messages import HumanMultimodalMessage, SystemMessage
+from rai.messages import human
 
 from rai_whoami.models import EmbodimentInfo, EmbodimentSource
 
@@ -37,10 +38,7 @@ class ImagePreProcessor(DataPreProcessor):
     def process(self, input: EmbodimentSource) -> EmbodimentInfo:
         context = [
             SystemMessage(content=self.system_prompt),
-            HumanMultimodalMessage(
-                content="Describe the image",
-                images=input.images,
-            ),
+            human("Describe the image", input.images),
         ]
         response = self.llm.invoke(context)
         return EmbodimentInfo(

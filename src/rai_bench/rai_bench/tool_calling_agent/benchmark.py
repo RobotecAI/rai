@@ -19,12 +19,11 @@ from pathlib import Path
 from typing import Iterator, List, Sequence, Tuple
 
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import AIMessage, BaseMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.runnables.config import RunnableConfig
 from langgraph.errors import GraphRecursionError
 from langgraph.graph.state import CompiledStateGraph
 from rai.agents import ReActAgent
-from rai.messages import HumanMultimodalMessage
 
 from rai_bench.base_benchmark import BaseBenchmark, TimeoutException
 from rai_bench.results_processing.langfuse_scores_tracing import ScoreTracingHandler
@@ -222,9 +221,7 @@ def run_benchmark(
         ).graph
         benchmark.run_next(
             agent=agent,
-            initial_state={
-                "messages": [HumanMultimodalMessage(content=task.get_prompt())]
-            },
+            initial_state={"messages": [HumanMessage(task.get_prompt())]},
             experiment_id=experiment_id,
         )
 

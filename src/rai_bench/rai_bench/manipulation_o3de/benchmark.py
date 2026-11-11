@@ -34,7 +34,6 @@ from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from rai.agents import ReActAgent
 from rai.communication.ros2.connectors import ROS2Connector
-from rai.messages import HumanMultimodalMessage
 from rai.tools.ros2 import (
     GetObjectPositionsTool,
     MoveToPointTool,
@@ -281,9 +280,7 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
                         prev_count = len(state["messages"])
 
                         for msg in new_messages:
-                            if isinstance(msg, HumanMultimodalMessage):
-                                last_msg = msg.text()
-                            elif isinstance(msg, BaseMessage):
+                            if isinstance(msg, BaseMessage):
                                 if isinstance(msg.content, list):
                                     if len(msg.content) == 1:
                                         if type(msg.content[0]) is dict:

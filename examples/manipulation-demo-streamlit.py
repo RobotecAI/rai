@@ -17,6 +17,7 @@ import os
 from pathlib import Path
 
 import streamlit as st
+from langchain_core.messages import HumanMessage
 from launch import LaunchDescription
 from launch.actions import (
     IncludeLaunchDescription,
@@ -26,7 +27,7 @@ from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from manipulation_common import create_agent
 from rai.communication.ros2.connectors.ros2_connector import ROS2Connector
-from rai.messages import HumanMultimodalMessage
+from rai.messages import human
 from rai.ui.streamlit import chat, reset
 
 from rai_bench.manipulation_o3de import get_scenarios
@@ -216,9 +217,9 @@ def main(o3de_config_path: str):
                 reset(agent)  # a new scene makes earlier object positions stale
                 st.rerun()
 
-    def with_camera_image(prompt: str) -> HumanMultimodalMessage:
+    def with_camera_image(prompt: str) -> HumanMessage:
         _, artifact = camera_tool._run()
-        return HumanMultimodalMessage(content=prompt, images=artifact.get("images", []))
+        return human(prompt, artifact.get("images", []) if artifact else [])
 
     chat(
         agent,

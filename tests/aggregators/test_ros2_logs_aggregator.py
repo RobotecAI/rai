@@ -25,8 +25,8 @@ from rai.aggregators.ros2.aggregators import (
     ROS2ImgVLMDiffAggregator,
     ROS2LogsAggregator,
 )
-from rai.communication.ros2.api import convert_ros_img_to_base64
-from rai.messages import HumanMultimodalMessage
+from rai.communication.ros2 import encode_image
+from rai.messages import human
 from rcl_interfaces.msg import Log
 from sensor_msgs.msg import Image
 
@@ -97,8 +97,7 @@ def test_ros2_last_image_aggregator(ros2_image: Image):
     aggregator = ROS2GetLastImageAggregator()
     aggregator(ros2_image)
     assert aggregator.get_buffer()[0] == ros2_image
-    b64_image = convert_ros_img_to_base64(ros2_image)
-    assert aggregator.get() == HumanMultimodalMessage(content="", images=[b64_image])
+    assert aggregator.get() == human(images=[encode_image(ros2_image)])
     assert aggregator.get_buffer() == []
     assert aggregator.get() is None
 
