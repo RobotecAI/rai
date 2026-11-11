@@ -103,6 +103,13 @@ class RaiTool(BaseTool):
                 return await self._acall(**kwargs)
         except ToolException:
             raise
+        except PermissionError as e:
+            if hasattr(e, "egress"):  # EgressDenied: a connector hook refused
+                what = f"{e.egress.kind} on {e.egress.name}"  # type: ignore[attr-defined]
+                raise ToolException(
+                    f"Denied by {e.hook} ({what}): {e.reason}"  # type: ignore[attr-defined]
+                ) from e
+            raise ToolException(f"{type(e).__name__}: {e}") from e
         except Exception as e:  # errors go back to the LLM, they never end the run
             if timeout.expired():
                 raise ToolException(f"Timed out after {self.timeout_s}s") from e

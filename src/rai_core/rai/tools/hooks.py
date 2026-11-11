@@ -16,6 +16,9 @@
 
 A `ToolHook` is `async (ToolCallContext) -> Allow | Deny`. A hook that raises, times out
 or returns anything else denies the call. Connector-side egress hooks are separate.
+
+Observers (`ToolHooks.observe`) see every hook's verdict, for audit logs. They
+cannot change a decision; their errors are logged.
 """
 
 import asyncio
@@ -61,6 +64,19 @@ ToolHook = Callable[[ToolCallContext], Awaitable[Allow | Deny]]
 
 
 @dataclass(frozen=True)
+class ToolDecision:
+    """What observers see: one hook's verdict on one tool call."""
+
+    call: ToolCallContext
+    hook: str
+    allowed: bool
+    reason: str = ""
+
+
+ToolObserver = Callable[[ToolDecision], None]
+
+
+@dataclass(frozen=True)
 class _Entry:
     hook: ToolHook
     timeout_s: float
@@ -71,6 +87,7 @@ class ToolHooks:
 
     def __init__(self) -> None:
         self._entries: tuple[_Entry, ...] = ()
+        self._observers: tuple[ToolObserver, ...] = ()
         self._lock = threading.Lock()
 
     def add(
@@ -87,6 +104,17 @@ class ToolHooks:
     def clear(self) -> None:
         with self._lock:
             self._entries = ()
+
+    def observe(self, observer: ToolObserver) -> ToolObserver:
+        """Call observer(decision) for every hook verdict of this chain. It runs
+        inline: keep it fast. Its errors are logged and never deny."""
+        with self._lock:
+            self._observers = (*self._observers, observer)
+        return observer
+
+    def unobserve(self, observer: ToolObserver) -> None:
+        with self._lock:
+            self._observers = tuple(o for o in self._observers if o != observer)
 
     def __len__(self) -> int:
         return len(self._entries)
@@ -112,10 +140,21 @@ async def run_tool_hooks(
                 failure = f"failed ({type(e).__name__}: {e})"
             else:
                 if isinstance(decision, Allow):
+                    _notify(chain, ToolDecision(call, name, True))
                     continue
                 if isinstance(decision, Deny):
+                    _notify(chain, ToolDecision(call, name, False, decision.reason))
                     return Deny(f"Denied by {name}: {decision.reason}")
                 failure = f"returned {decision!r}, expected Allow or Deny"
             logger.warning("Tool %s denied: hook %s %s", call.name, name, failure)
+            _notify(chain, ToolDecision(call, name, False, failure))
             return Deny(f"Denied: hook {name} {failure}")
     return None
+
+
+def _notify(chain: ToolHooks, decision: ToolDecision) -> None:
+    for observer in chain._observers:
+        try:
+            observer(decision)
+        except Exception:
+            logger.exception("Tool hook observer %r failed", observer)

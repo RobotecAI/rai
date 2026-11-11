@@ -121,6 +121,7 @@ class EgressDecision:
     allowed: bool
     reason: str = ""
     leased: bool = False  # allowed by an earlier lease; the hook did not run
+    lease_s: float = 0.0  # the lease this decision granted
 
 
 Key = tuple[str, str, str]  # kind, resolved name, type
@@ -211,7 +212,7 @@ class EgressHooks:
 
     def unobserve(self, observer: Callable[[EgressDecision], None]) -> None:
         with self._lock:
-            self._observers = tuple(o for o in self._observers if o is not observer)
+            self._observers = tuple(o for o in self._observers if o != observer)
 
     def __len__(self) -> int:
         return len(self._entries)
@@ -326,7 +327,12 @@ class EgressCheck:
                 entry.leases[self._key] = time.monotonic() + decision.lease_s
             self._i += 1
             if chain._observers or logger.isEnabledFor(logging.DEBUG):
-                _notify(chain, EgressDecision(self.egress, entry.name, True))
+                _notify(
+                    chain,
+                    EgressDecision(
+                        self.egress, entry.name, True, lease_s=decision.lease_s
+                    ),
+                )
             return
         if isinstance(decision, Deny):
             self._deny(decision.reason, hook_failed=False)
