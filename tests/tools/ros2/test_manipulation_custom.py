@@ -40,9 +40,9 @@ from rai.tools.ros2.manipulation.custom import (
 def mock_connector():
     """Create a mock ROS2Connector for testing."""
     connector = MagicMock(spec=ROS2Connector)
-    connector.node = MagicMock()
-    connector.node.create_client = MagicMock()
-    connector.node.get_logger.return_value = MagicMock()
+    connector._node = MagicMock()
+    connector._node.create_client = MagicMock()
+    connector._node.get_logger.return_value = MagicMock()
     connector.logger = MagicMock()
     connector.get_services_names_and_types.return_value = [
         ("/service1", ["type1"]),
@@ -93,7 +93,7 @@ def identity_transform():
 def setup_service_client(mock_connector, mock_service_client, available=True):
     """Helper to set up service client on connector."""
     mock_service_client.wait_for_service.return_value = available
-    mock_connector.node.create_client.return_value = mock_service_client
+    mock_connector._node.create_client.return_value = mock_service_client
     return mock_service_client
 
 

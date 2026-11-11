@@ -18,7 +18,7 @@ import subprocess
 import typing
 import unittest
 from pathlib import Path
-from typing import List, Optional, Tuple, get_args, get_origin
+from typing import Optional, get_args, get_origin
 from unittest.mock import MagicMock, patch
 
 import rclpy
@@ -479,14 +479,11 @@ class TestROS2ConnectorInterface(unittest.TestCase):
 
         self.assertEqual(
             signature.return_annotation,
-            List[Tuple[str, List[str]]],
-            f"Return type is incorrect, expected: List[Tuple[str, List[str]]], got: {signature.return_annotation}",
+            list[tuple[str, list[str]]],
+            f"Return type is incorrect, expected: list[tuple[str, list[str]]], got: {signature.return_annotation}",
         )
 
     def test_node_property(self):
-        """Test that the node property returns the expected Node instance."""
-        mock_node = MagicMock(spec=Node)
-        self.connector._node = mock_node
-
-        self.assertEqual(self.connector.node, mock_node)
+        """Test that the node property returns the connector's Node."""
+        self.assertIs(self.connector.node, self.connector._node)
         self.assertIsInstance(self.connector.node, Node)

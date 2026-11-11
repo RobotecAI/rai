@@ -83,7 +83,7 @@ class MoveToPointTool(BaseROS2Tool):
         z: float,
         task: Literal["grab", "drop"],
     ) -> str:
-        client = self.connector.node.create_client(
+        client = self.connector._node.create_client(
             ManipulatorMoveTo,
             "/manipulator_move_to",
         )
@@ -130,7 +130,7 @@ class MoveToPointTool(BaseROS2Tool):
             request.final_gripper_state = True  # open
 
         future = client.call_async(request)
-        self.connector.node.get_logger().debug(
+        self.connector._node.get_logger().debug(
             f"Calling ManipulatorMoveTo service with request: x={request.target_pose.pose.position.x:.2f}, y={request.target_pose.pose.position.y:.2f}, z={request.target_pose.pose.position.z:.2f}"
         )
         response = get_future_result(future, timeout_sec=self.timeout_sec)
@@ -215,7 +215,7 @@ class MoveObjectFromToTool(BaseROS2Tool):
         )
 
         # NOTE: create_client could be refactored into self.connector.service_call
-        client = self.connector.node.create_client(
+        client = self.connector._node.create_client(
             ManipulatorMoveTo,
             "/manipulator_move_to",
         )
@@ -270,7 +270,7 @@ class MoveObjectFromToTool(BaseROS2Tool):
         request.final_gripper_state = False  # closed
 
         future = client.call_async(request)
-        self.connector.node.get_logger().debug(
+        self.connector._node.get_logger().debug(
             f"Calling ManipulatorMoveTo service with request: x={request.target_pose.pose.position.x:.2f}, y={request.target_pose.pose.position.y:.2f}, z={request.target_pose.pose.position.z:.2f}"
         )
         response = get_future_result(future, timeout_sec=self.timeout_sec)
@@ -299,7 +299,7 @@ class MoveObjectFromToTool(BaseROS2Tool):
         request.final_gripper_state = True  # open
 
         future = client.call_async(request)
-        self.connector.node.get_logger().debug(
+        self.connector._node.get_logger().debug(
             f"Calling ManipulatorMoveTo service with request: x={request.target_pose.pose.position.x:.2f}, y={request.target_pose.pose.position.y:.2f}, z={request.target_pose.pose.position.z:.2f}"
         )
 
@@ -403,7 +403,7 @@ class ResetArmTool(BaseROS2Tool):
     manipulator_frame: str = Field(..., description="Manipulator frame")
 
     def _run(self):
-        client = self.connector.node.create_client(
+        client = self.connector._node.create_client(
             ManipulatorMoveTo,
             "/manipulator_move_to",
         )
@@ -424,7 +424,7 @@ class ResetArmTool(BaseROS2Tool):
         request.final_gripper_state = False  # closed
 
         future = client.call_async(request)
-        self.connector.node.get_logger().debug(
+        self.connector._node.get_logger().debug(
             f"Calling ManipulatorMoveTo service with request: x={request.target_pose.pose.position.x:.2f}, y={request.target_pose.pose.position.y:.2f}, z={request.target_pose.pose.position.z:.2f}"
         )
         response = get_future_result(future, timeout_sec=5.0)

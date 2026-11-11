@@ -110,12 +110,12 @@ class NavigateToPoseBlockingTool(WorkspaceBounds, BaseROS2Tool):
     def _run(self, x: float, y: float, z: float, yaw: float) -> str:
         self.reject_out_of_bounds(x, y, z)
         action_client = ActionClient(
-            self.connector.node, NavigateToPose, self.action_name
+            self.connector._node, NavigateToPose, self.action_name
         )
 
         pose = PoseStamped()
         pose.header.frame_id = self.frame_id
-        pose.header.stamp = self.connector.node.get_clock().now().to_msg()
+        pose.header.stamp = self.connector.now().to_msg()
         pose.pose.position.x = x
         pose.pose.position.y = y
         pose.pose.position.z = z

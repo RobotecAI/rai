@@ -273,7 +273,7 @@ class GetROS2TransformTool(BaseROS2Tool):
         )
 
         transform_time = rclpy.time.Time.from_msg(transform.header.stamp)
-        current_time = self.connector._node.get_clock().now()
+        current_time = self.connector.now()
 
         age_seconds = (current_time - transform_time).nanoseconds / 1e9
 
