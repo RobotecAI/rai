@@ -109,8 +109,10 @@ class Subscription:
         maxsize: Optional[int],
         on_close: Callable[[], None] = lambda: None,
         replay: bool = False,
+        decode: Callable[[Any], Any] = lambda msg: msg,
     ) -> None:
         self.topic = name
+        self._decode = decode
         self.closed = False
         self._on_close = on_close
         self._runtime = runtime
@@ -121,7 +123,7 @@ class Subscription:
         self._dispatcher: Optional[Dispatcher] = None
         if callback is not None:
             self._dispatcher = Dispatcher(
-                runtime, lambda msg: _invoke(runtime, callback, msg), maxsize
+                runtime, lambda msg: _invoke(runtime, callback, decode(msg)), maxsize
             )
             self._consume: Callable[[Any], None] = self._dispatcher.push
         else:
@@ -141,13 +143,14 @@ class Subscription:
             if self.closed:
                 raise ConnectorClosedError(f"Subscription to {self.topic} is closed")
             if self._buffer:
-                return self._buffer.popleft()
+                return self._decode(self._buffer.popleft())
             waiter = Waiter()
             self._waiters.append(waiter)
         try:
-            return await self._runtime.wait(
+            msg = await self._runtime.wait(
                 waiter, timeout, f"receive from {self.topic}"
             )
+            return self._decode(msg)
         finally:
             with self._lock:
                 if waiter in self._waiters:
@@ -320,7 +323,7 @@ class ROS2Base:
         runtime: Optional[ROS2Runtime],
         executor: Optional[ExecutorKind],
         use_sim_time: bool,
-        executor_type: Optional[str],
+        executor_type: Optional[str] = None,
     ) -> None:
         if executor_type is not None:  # R5: remove
             warnings.warn(
@@ -363,9 +366,6 @@ class ROS2Base:
         self._runtime.off_close(self.close)
         release(self._runtime)
 
-    def shutdown(self) -> None:  # R5: old name of close()
-        self.close()
-
     def __enter__(self) -> Any:
         return self
 
@@ -404,21 +404,6 @@ class ROS2Base:
 
     # ------------------------------------------------------------ topics
 
-    def subscribe(
-        self,
-        topic: str,
-        callback: Optional[Callable[[Any], Any]] = None,
-        *,
-        msg_type: Any = None,
-        qos: QoSProfile = QoS.AUTO,
-        maxsize: Optional[int] = 10,
-        raw: bool = False,
-    ) -> Subscription:
-        """Subscribe to a topic. msg_type (class or "pkg/msg/Name") defaults to
-        the type in the ROS graph. raw=True delivers serialized bytes (relays
-        and recorders only)."""
-        return self._subscribe(topic, callback, msg_type, qos, maxsize, raw)[1]
-
     def _subscribe(
         self,
         topic: str,
@@ -427,6 +412,7 @@ class ROS2Base:
         qos: QoSProfile,
         maxsize: Optional[int],
         raw: bool = False,
+        decode: Callable[[Any], Any] = lambda msg: msg,
     ) -> tuple[str, Subscription]:
         self._check()
         entry, created = self._runtime.topic(topic, msg_type, qos, raw)
@@ -439,23 +425,10 @@ class ROS2Base:
             maxsize,
             lambda: self._subscriptions.pop(key, None),
             replay=created,
+            decode=decode,
         )
         self._subscriptions[key] = subscription
         return key, subscription
-
-    async def receive(
-        self,
-        topic: str,
-        *,
-        msg_type: Any = None,
-        timeout: float = 1.0,
-        max_age: Optional[float] = None,
-        qos: QoSProfile = QoS.AUTO,
-    ) -> Any:
-        """The latest message on topic. Without max_age a cached sample of any
-        age is returned (latched topics); with it, only one at most max_age
-        seconds old, waiting up to timeout for it."""
-        return (await self._receive(topic, msg_type, timeout, max_age, qos))[0]
 
     async def _receive(
         self,
@@ -482,26 +455,6 @@ class ROS2Base:
             with entry.lock:
                 if waiter in entry.waiters:
                     entry.waiters.remove(waiter)
-
-    def _register(
-        self,
-        source: str,
-        callback: Callable[[Any], Any],
-        msg_type: Any,
-        qos: QoSProfile,
-        maxsize: Optional[int],
-    ) -> str:
-        return self._subscribe(source, callback, msg_type, qos, maxsize)[0]
-
-    def unregister_callback(self, callback_id: str) -> None:
-        """Stop a callback registered with register_callback (R5: use
-        Subscription.close)."""
-        if self._closed:
-            return
-        subscription = self._subscriptions.pop(callback_id, None)
-        if subscription is None:
-            raise ConnectorException(f"Callback with id {callback_id} not found.")
-        subscription.close()
 
 
 class ROS2Connector(ROS2Base, BaseConnector[ROS2Message]):
@@ -531,7 +484,39 @@ class ROS2Connector(ROS2Base, BaseConnector[ROS2Message]):
         super().close()
         self.callback_executor.shutdown(wait=False)
 
+    def shutdown(self) -> None:  # R5: old name of close()
+        self.close()
+
     # ------------------------------------------------------------ topics
+
+    def subscribe(
+        self,
+        topic: str,
+        callback: Optional[Callable[[Any], Any]] = None,
+        *,
+        msg_type: Any = None,
+        qos: QoSProfile = QoS.AUTO,
+        maxsize: Optional[int] = 10,
+        raw: bool = False,
+    ) -> Subscription:
+        """Subscribe to a topic. msg_type (class or "pkg/msg/Name") defaults to
+        the type in the ROS graph. raw=True delivers serialized bytes (relays
+        and recorders only)."""
+        return self._subscribe(topic, callback, msg_type, qos, maxsize, raw)[1]
+
+    async def receive(
+        self,
+        topic: str,
+        *,
+        msg_type: Any = None,
+        timeout: float = 1.0,
+        max_age: Optional[float] = None,
+        qos: QoSProfile = QoS.AUTO,
+    ) -> Any:
+        """The latest message on topic. Without max_age a cached sample of any
+        age is returned (latched topics); with it, only one at most max_age
+        seconds old, waiting up to timeout for it."""
+        return (await self._receive(topic, msg_type, timeout, max_age, qos))[0]
 
     async def publish(
         self, topic: str, msg: Any, *, qos: QoSProfile = QoS.COMMAND
@@ -692,6 +677,16 @@ class ROS2Connector(ROS2Base, BaseConnector[ROS2Message]):
 
     # ------------------------------------- R5: compatibility with the 2.x API
 
+    def unregister_callback(self, callback_id: str) -> None:
+        """Stop a callback registered with register_callback (R5: use
+        Subscription.close)."""
+        if self._closed:
+            return
+        subscription = self._subscriptions.pop(callback_id, None)
+        if subscription is None:
+            raise ConnectorException(f"Callback with id {callback_id} not found.")
+        subscription.close()
+
     def send_message(
         self,
         message: ROS2Message,
@@ -740,9 +735,9 @@ class ROS2Connector(ROS2Base, BaseConnector[ROS2Message]):
             meta = {"msg_type": str(type(msg))}
             return callback(ROS2Message(payload=msg, metadata=meta))
 
-        return self._register(
+        return self._subscribe(
             source, callback if raw else wrapped, msg_type, qos_profile or QoS.AUTO, 10
-        )
+        )[0]
 
     def service_call(
         self,

@@ -19,6 +19,7 @@ import time
 from typing import Any
 from unittest.mock import MagicMock
 
+import numpy as np
 import pytest
 import rai
 from langchain_core.callbacks import BaseCallbackHandler
@@ -44,6 +45,8 @@ from rai.agents.events import (
     ToolEnd,
     ToolStart,
 )
+from rai.communication import HRIMessage
+from rai.content import Image
 from rai.tools import (
     Allow,
     Deny,
@@ -142,6 +145,14 @@ def test_react_loop_runs_tools_and_keeps_history():
     agent.graph.get_graph()  # the graph stays a plain compiled LangGraph
     asyncio.run(agent.ainvoke("again"))  # second turn sees the first one
     assert len(agent.history) == 6
+
+
+def test_hri_messages_reach_the_model_as_content_blocks():
+    agent = ReActAgent(model("a cat"))
+    image = Image(np.zeros((4, 4, 3), np.uint8))
+    asyncio.run(agent.ainvoke(HRIMessage("what is it?", [image])))
+    blocks = agent.history[0].content
+    assert [b["type"] for b in blocks] == ["text", "image"]
 
 
 def test_tool_error_and_denial_are_tool_messages_and_events():
@@ -461,14 +472,13 @@ def test_hri_output_closes_interrupted_turn():
     ]
 
 
-def test_hri_connector_sender_builds_and_sends_messages():
+def test_hri_connector_sender_sends_hri_messages():
     connector = MagicMock()
     send = hri_connector_sender(connector, "/to_human")
     send(HRIChunk("hello", "turn-1", 2, True))
-    (message, comm_id, seq, end), _ = connector.build_message.call_args
-    assert (message.text, comm_id, seq, end) == ("hello", "turn-1", 2, True)
-    connector.send_message.assert_called_once_with(
-        connector.build_message.return_value, "/to_human"
+    connector.sync.send.assert_called_once_with(
+        "/to_human",
+        HRIMessage("hello", communication_id="turn-1", seq_no=2, seq_end=True),
     )
 
 

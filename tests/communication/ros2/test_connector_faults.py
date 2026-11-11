@@ -37,13 +37,10 @@ import numpy as np
 import pytest
 from example_interfaces.action import Fibonacci
 from geometry_msgs.msg import TransformStamped
-from PIL import Image as PILImage
-from pydub import AudioSegment
 from rai.communication.base_connector import ConnectorClosedError
 from rai.communication.ros2 import (
     ROS2Connector,
     ROS2HRIConnector,
-    ROS2HRIMessage,
     ROS2Message,
 )
 from rai.communication.ros2.context import NodeDiscovery
@@ -112,7 +109,7 @@ def run_bounded(fn: Callable[[], Any], timeout: float) -> tuple[bool, Any]:
 
 
 def close_quietly(connector: Any) -> None:
-    run_bounded(connector.shutdown, 5.0)
+    run_bounded(connector.close, 5.0)
     pool = getattr(connector, "callback_executor", None)
     if pool is not None:
         pool.shutdown(wait=False, cancel_futures=True)
@@ -232,15 +229,20 @@ def wait_for_action(connector: Any, name: str) -> None:
 def test_spin_survives_malformed_hri_image(connectors, helper_node):
     topic = unique("hri")
     connector = connectors(ROS2HRIConnector)
-    got: list[str] = []
-    connector.register_callback(topic, lambda m: got.append(m.text))
+    got: list[Any] = []
+    connector.subscribe(topic, got.append)
     pub = helper_node().create_publisher(HRIMessage, topic, 10)
     wait_for_subscriber(pub)
 
     bad = HRIMessage(text="bad")
-    bad.images = [numpy_to_imgmsg(np.zeros((4, 4), np.float32), "32FC1")]
+    truncated = numpy_to_imgmsg(np.zeros((4, 4, 3), np.uint8), "rgb8")
+    truncated.height = 40
+    bad.images = [truncated, numpy_to_imgmsg(np.zeros((4, 4), np.float32), "32FC1")]
     pub.publish(bad)
-    assert publish_until(pub, HRIMessage(text="good"), lambda: "good" in got)
+    assert publish_until(pub, HRIMessage(text="good"), lambda: got and got[-1].text)
+    assert wait_until(lambda: any(m.text == "good" for m in got))
+    (decoded,) = [m for m in got if m.text == "bad"]  # the rest of it is kept
+    assert [i.encoding for i in decoded.images] == ["32FC1"]
 
 
 def test_dispatch_survives_register_unregister_churn(connectors, helper_node):
@@ -309,7 +311,7 @@ def test_hri_burst_delivered_in_order(connectors, helper_node):
         time.sleep(0.01)
         got.append(int(msg.text))
 
-    connector.register_callback(topic, slow)
+    connector.subscribe(topic, slow)
     pub = helper_node().create_publisher(HRIMessage, topic, 100)
     assert publish_until(pub, HRIMessage(text="-1"), lambda: got)
     for i in range(50):
@@ -527,40 +529,9 @@ def test_hri_subscription_is_reliable_without_publishers(connectors):
     # HRI QoS is RELIABLE: best effort drops large image frames.
     connector = connectors(ROS2HRIConnector)
     topic = unique("hri_qos")
-    connector.register_callback(topic, lambda m: None)
+    connector.subscribe(topic, lambda m: None)
     (sub,) = [s for s in connector._node.subscriptions if s.topic_name == topic]
     assert sub.qos_profile.reliability == ReliabilityPolicy.RELIABLE
-
-
-def test_hri_message_round_trip(connectors, helper_node):
-    topic = unique("hri_instance")
-    connector = connectors(ROS2HRIConnector)
-    received: list[HRIMessage] = []
-    helper_node().create_subscription(HRIMessage, topic, received.append, 10)
-    pixels = np.random.default_rng(0).integers(0, 255, (24, 32, 3), dtype=np.uint8)
-    audio = AudioSegment(
-        data=bytes(range(256)) * 4, frame_rate=16000, sample_width=2, channels=1
-    )
-    message = ROS2HRIMessage(
-        text="hello",
-        images=[PILImage.fromarray(pixels)],
-        audios=[audio],
-        message_author="ai",
-        communication_id="conversation",
-        seq_no=3,
-        seq_end=True,
-    )
-    assert wait_until(lambda: connector.send_message(message, topic) or received)
-    restored = ROS2HRIMessage.from_ros2(received[0], message_author="ai")
-    assert restored.text == "hello"
-    assert np.array_equal(np.array(restored.images[0]), pixels)
-    assert restored.audios[0].raw_data == audio.raw_data
-    assert restored.audios[0].frame_rate == 16000
-    assert (restored.communication_id, restored.seq_no, restored.seq_end) == (
-        "conversation",
-        3,
-        True,
-    )
 
 
 # ------------------------------------------------------------------- services
@@ -995,19 +966,21 @@ def test_no_user_callbacks_after_shutdown(connectors, helper_node):
 @pytest.mark.parametrize("cls", [ROS2Connector, ROS2HRIConnector])
 def test_every_call_after_shutdown_raises_closed(connectors, cls):
     connector = connectors(cls)
-    connector.shutdown()
+    connector.close()
     msg = ROS2Message(payload={})
     hri = cls is ROS2HRIConnector
-    out = ROS2HRIMessage(text="x", message_author="ai") if hri else msg
     calls = {
-        "send_message": lambda: connector.send_message(out, "/t", msg_type=STRING),
-        "receive_message": lambda: connector.receive_message("/t", msg_type=STRING),
-        "register_callback": lambda: connector.register_callback(
-            "/t", print, msg_type=INT32
-        ),
+        "send": lambda: connector.sync.send("/t", "x"),
+        "receive": lambda: connector.sync.receive("/t"),
+        "subscribe": lambda: connector.subscribe("/t", print),
     }
     if not hri:  # 3.0 HRI connectors only send and receive
-        calls |= {
+        calls = {
+            "send_message": lambda: connector.send_message(msg, "/t", msg_type=STRING),
+            "receive_message": lambda: connector.receive_message("/t", msg_type=STRING),
+            "register_callback": lambda: connector.register_callback(
+                "/t", print, msg_type=INT32
+            ),
             "service_call": lambda: connector.service_call(msg, "/s", msg_type=TRIGGER),
             "start_action": lambda: connector.start_action(
                 msg, "/a", msg_type=FIBONACCI
@@ -1067,7 +1040,7 @@ def test_shutdown_wakes_waiting_receive_message(connectors):
         target=lambda: result.append(run_bounded(receive, 25.0)), daemon=True
     ).start()
     time.sleep(0.2)
-    run_bounded(connector.shutdown, 5.0)
+    run_bounded(connector.close, 5.0)
     assert wait_until(lambda: result, 5.0)
     assert isinstance(result[0][1], ConnectorClosedError), result
 
@@ -1092,7 +1065,7 @@ def test_shutdown_wakes_waiting_service_call(connectors, helper_node):
     ).start()
     try:
         assert called.wait(5.0)
-        run_bounded(connector.shutdown, 5.0)
+        run_bounded(connector.close, 5.0)
         assert wait_until(lambda: result, 5.0)
         assert isinstance(result[0][1], ConnectorClosedError), result
     finally:

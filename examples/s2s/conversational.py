@@ -12,161 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import argparse
-import logging
-import time
-from queue import Queue
-from threading import Event, Thread
-from typing import Dict, List
-
 import rai
-import rclpy
-from langchain_core.callbacks import BaseCallbackHandler
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
-from rai import get_llm
-from rai.agents import SyncAgent
-from rai.communication import BaseConnector
-from rai.communication.ros2 import IROS2Message, ROS2HRIConnector, TopicConfig
+from rai.agents import HRIOutput, ReActAgent, hri_connector_sender
+from rai.communication.ros2 import ROS2Context, ROS2HRIConnector
 
-from rai_interfaces.msg import HRIMessage as InterfacesHRIMessage
-
-# NOTE: the Agent code included here is temporary until a dedicated speech agent is created
-# it can still serve as a reference for writing your own RAI agents
+# A voice conversation: the ASR agent publishes what the human says to
+# /from_human, the TTS agent speaks what this agent publishes to /to_human.
 
 
-class LLMTextHandler(BaseCallbackHandler):
-    def __init__(self, connector: ROS2HRIConnector, speech_id: str = ""):
-        self.connector = connector
-        self.token_buffer = ""
-        self.speech_id = speech_id
-
-    def on_llm_new_token(self, token: str, **kwargs):
-        self.token_buffer += token
-        if len(self.token_buffer) > 100 or token in [".", "?", "!", ",", ";", ":"]:
-            logging.info(f"Sending token buffer: {self.token_buffer}")
-            self.connector.send_all_targets(
-                AIMessage(content=self.token_buffer), self.speech_id
-            )
-            self.token_buffer = ""
-
-    def on_llm_end(
-        self,
-        response,
-        *,
-        run_id,
-        parent_run_id=None,
-        **kwargs,
-    ):
-        if self.token_buffer:
-            logging.info(f"Sending token buffer: {self.token_buffer}")
-            self.connector.send_all_targets(AIMessage(content=self.token_buffer))
-            self.token_buffer = ""
-
-
-class S2SConversationalAgent(SyncAgent):
-    def __init__(self, connectors: Dict[str, BaseConnector]):  # type: ignore
-        super().__init__()
-        self.connectors = connectors
-        self.message_history: List[HumanMessage | AIMessage | SystemMessage] = [
-            SystemMessage(
-                content="Pretend you are a robot. Answer as if you were a robot."
-            )
-        ]
-        self.speech_queue: Queue[InterfacesHRIMessage] = Queue()
-
-        self.llm = get_llm("complex", streaming=True)
-        self._setup_ros_connector()
-        self.main_thread = None
-        self.stop_thread = Event()
-        self.current_speech_id = ""
-
-    def setup(self):
-        logging.info("Running S2SConversationalAgent")
-        self.main_thread = Thread(target=self._main_loop)
-        self.main_thread.start()
-
-    def _main_loop(self):
-        while not self.stop_thread.is_set():
-            time.sleep(0.01)
-            speech = ""
-            while not self.speech_queue.empty():
-                speech_message = self.speech_queue.get()
-                speech += "".join(speech_message.text)
-                logging.info(f"Received human speech {speech}!")
-                self.current_speech_id = speech_message.conversation_id
-            if speech != "":
-                self.message_history.append(
-                    HumanMessage(content=speech, conversation_id=self.current_speech_id)
-                )
-                assert isinstance(self.connectors["ros2"], ROS2HRIConnector)
-                ai_answer = self.llm.invoke(
-                    self.message_history,
-                    config={
-                        "callbacks": [
-                            LLMTextHandler(
-                                self.connectors["ros2"], self.current_speech_id
-                            )
-                        ]
-                    },
-                )
-                self.message_history.append(ai_answer)  # type: ignore
-
-    def _on_from_human(self, msg: IROS2Message):
-        assert isinstance(msg, InterfacesHRIMessage)
-        logging.info("Received message from human: %s", msg.text)
-        self.speech_queue.put(msg)
-
-    def _setup_ros_connector(self):
-        self.connectors["ros2"] = ROS2HRIConnector(
-            sources=[
-                (
-                    "/from_human",
-                    TopicConfig(
-                        "rai_interfaces/msg/HRIMessage",
-                        is_subscriber=True,
-                        source_author="human",
-                        subscriber_callback=self._on_from_human,
-                    ),
-                )
-            ],
-            targets=[
-                (
-                    "/to_human",
-                    TopicConfig(
-                        "rai_interfaces/msg/HRIMessage",
-                        source_author="ai",
-                        is_subscriber=False,
-                    ),
-                )
-            ],
-        )
-
-    def teardown(self):
-        assert isinstance(self.connectors["ros2"], ROS2HRIConnector)
-        self.connectors["ros2"].shutdown()
-        self.stop_thread.set()
-        if self.main_thread is not None:
-            self.main_thread.join()
-
-
-def parse_arguments():
-    parser = argparse.ArgumentParser(
-        description="Text To Speech Configuration",
-        allow_abbrev=True,
+@ROS2Context()
+def main():
+    hri_connector = ROS2HRIConnector()
+    agent = ReActAgent(
+        system_prompt="Pretend you are a robot. Answer as if you were a robot."
     )
-
-    # Use parse_known_args to ignore unknown arguments
-    args, unknown = parser.parse_known_args()
-
-    if unknown:
-        print(f"Ignoring unknown arguments: {unknown}")
-
-    return args
+    agent.subscribe(HRIOutput(hri_connector_sender(hri_connector, "/to_human")))
+    hri_connector.subscribe("/from_human", agent.submit)
+    rai.run(agent)
 
 
 if __name__ == "__main__":
-    args = parse_arguments()
-    rclpy.init()
-    agent = S2SConversationalAgent(connectors={})
-    rai.run(agent)
-    rclpy.shutdown()
+    main()

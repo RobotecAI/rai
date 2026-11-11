@@ -2,10 +2,10 @@
 
 RAI provides robust connectors for interacting with ROS 2 middleware, supporting both standard and human-robot interaction (HRI) message flows.
 
-| Connector          | Description                                                                                     | Example Usage                        |
-| ------------------ | ----------------------------------------------------------------------------------------------- | ------------------------------------ |
-| `ROS2Connector`    | Standard connector for generic ROS 2 topics, services, and actions.                             | `connector = ROS2Connector()`        |
-| `ROS2HRIConnector` | Connector for multimodal HRI messages over ROS 2, combining ROS2BaseConnector and HRIConnector. | `hri_connector = ROS2HRIConnector()` |
+| Connector          | Description                                                             | Example Usage                        |
+| ------------------ | ----------------------------------------------------------------------- | ------------------------------------ |
+| `ROS2Connector`    | Standard connector for generic ROS 2 topics, services, and actions.     | `connector = ROS2Connector()`        |
+| `ROS2HRIConnector` | Connector for multimodal HRI messages (text, images, audio) over ROS 2. | `hri_connector = ROS2HRIConnector()` |
 
 ## `ROS2Connector`
 
@@ -40,57 +40,43 @@ Connectors run on a `ROS2Runtime`: one node, one executor (`EventsExecutor` wher
 
 ## `ROS2HRIConnector`
 
-The `ROS2HRIConnector` extends `ROS2BaseConnector` and implements the `HRIConnector` interface for multimodal human-robot interaction messages. It is specialized for exchanging `ROS2HRIMessage` objects, which can contain text, images, and audio.
+`ROS2HRIConnector` sends and receives `rai.communication.HRIMessage`s (text, `rai.content.Image`s and `rai.content.Audio`, a communication id and sequence numbers) as `rai_interfaces/msg/HRIMessage`, on the same runtime as `ROS2Connector`. HRI QoS is reliable and its subscriptions never drop, so every message from a human arrives, in order. Received images and audio are numpy views of the ROS message.
 
-### Key Features
+### Class definition
 
--   Publishes and subscribes to `rai_interfaces/msg/HRIMessage` topics
--   Converts between ROS 2 HRI messages and the internal multimodal format
--   Supports all standard connector operations (topics, services, actions)
--   Suitable for integrating AI agents with human-facing ROS 2 interfaces
+::: rai.communication.ros2.connectors.hri_connector.ROS2HRIConnector
 
 ### Example Usage
 
 ```python
-from rai.communication.ros2.connectors import ROS2HRIConnector
+import numpy as np
 
-hri_connector = ROS2HRIConnector()
+from rai.communication import HRIMessage
+from rai.communication.ros2 import ROS2HRIConnector
+from rai.content import Image
 
-# Send a multimodal HRI message to a topic
-hri_connector.send_message(
-    message=my_hri_msg,  # ROS2HRIMessage
-    target="/to_human"
-)
+with ROS2HRIConnector() as hri_connector:
+    hri_connector.sync.send("/to_human", "Hello")  # text only
+    image = Image(np.zeros((480, 640, 3), np.uint8), "rgb8")
+    hri_connector.sync.send("/to_human", HRIMessage("Look", images=[image]))
 
-# Register a callback for incoming HRI messages
-hri_connector.register_callback(
-    source="/from_human",
-    callback=on_human_message
-)
+    sub = hri_connector.subscribe("/from_human", callback=print)
+    last = hri_connector.sync.receive("/from_human", timeout=5.0)
 ```
-
-### Message Conversion
-
-The `ROS2HRIConnector` automatically converts between ROS 2 `rai_interfaces/msg/HRIMessage` and the internal `ROS2HRIMessage` format for seamless multimodal communication.
 
 ## Usage in Agents
 
-Both connectors are commonly used in RAI agents to interface with ROS 2 environments. Example:
-
 ```python
-from rai.communication.ros2.connectors import ROS2Connector, ROS2HRIConnector
+from rai.agents import HRIOutput, ReActAgent, hri_connector_sender
+from rai.communication.ros2 import ROS2Connector, ROS2HRIConnector
+from rai.tools.ros2 import ROS2Toolkit
 
 ros2_connector = ROS2Connector()
 hri_connector = ROS2HRIConnector()
 
-# Use with tools or agents
-agent = ReActAgent(
-    target_connectors={"/to_human": hri_connector},
-    tools=ROS2Toolkit(connector=ros2_connector).get_tools()
-)
-
-# Subscribe to human input
-agent.subscribe_source("/from_human", hri_connector)
+agent = ReActAgent(tools=ROS2Toolkit(connector=ros2_connector).get_tools())
+agent.subscribe(HRIOutput(hri_connector_sender(hri_connector, "/to_human")))
+hri_connector.subscribe("/from_human", agent.submit)
 ```
 
 ## ROS2 Utilities

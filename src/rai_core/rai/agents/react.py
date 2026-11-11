@@ -53,8 +53,9 @@ from rai.agents.events import (
     ToolEnd,
     ToolStart,
 )
+from rai.communication.hri_connector import HRIMessage
 from rai.llm import get_llm, get_tracing_callbacks
-from rai.messages import with_tool_images
+from rai.messages import human, with_tool_images
 from rai.tools import Effect, RaiTool, from_langchain
 
 logger = logging.getLogger(__name__)
@@ -191,12 +192,12 @@ class StateContext(AgentMiddleware[Any, Any]):
         return await handler(request)
 
 
-def _to_message(message: Any) -> BaseMessage:
+def _to_message(message: str | BaseMessage | HRIMessage) -> BaseMessage:
     if isinstance(message, str):
         return HumanMessage(message)
-    if isinstance(message, BaseMessage):
-        return message
-    return message.to_langchain()  # e.g. HRIMessage
+    if isinstance(message, HRIMessage):
+        return human(message.text, message.images, message.audios)
+    return message
 
 
 def _unanswered(messages: Sequence[BaseMessage]) -> list[ToolMessage]:
@@ -266,7 +267,7 @@ class ReActAgent(BaseAgent):
         self._loop: asyncio.AbstractEventLoop | None = None
         self._turn: asyncio.Task[AIMessage] | None = None
 
-    async def ainvoke(self, *messages: str | BaseMessage) -> AIMessage:
+    async def ainvoke(self, *messages: str | BaseMessage | HRIMessage) -> AIMessage:
         """Run one turn on ``messages`` and return the final answer.
 
         Turns of one agent must not overlap. Cancelling the call cancels the turn.

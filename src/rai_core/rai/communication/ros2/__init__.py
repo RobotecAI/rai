@@ -40,7 +40,7 @@ from .exceptions import (
     ROS2TimeoutError,
 )
 from .images import encode_image
-from .messages import ROS2HRIMessage, ROS2Message
+from .messages import ROS2Message
 from .parameters import get_param_value
 from .waiters import wait_for_ros2_actions, wait_for_ros2_services, wait_for_ros2_topics
 
@@ -56,7 +56,6 @@ __all__ = [
     "ROS2Context",
     "ROS2GoalRejectedError",
     "ROS2HRIConnector",
-    "ROS2HRIMessage",
     "ROS2Message",
     "ROS2ParameterError",
     "ROS2ServiceError",

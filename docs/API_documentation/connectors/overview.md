@@ -26,17 +26,19 @@ The foundation interface that defines common communication patterns:
 -   Actions (long-running operations with feedback)
 -   Callback registration for asynchronous notifications
 
-#### HRIConnector[T]
+#### HRIConnector
 
-??? info "HRIConnector class definition"
+??? info "HRIConnector and HRIMessage definitions"
 
     ::: rai.communication.hri_connector.HRIConnector
 
-Extends BaseConnector with Human-Robot Interaction capabilities:
+    ::: rai.communication.hri_connector.HRIMessage
 
--   Supports multimodal messages (text, images, audio)
--   Provides conversion to/from Langchain message formats
--   Handles message sequencing and conversation IDs
+A protocol for Human-Robot Interaction transports (`send`, `subscribe`, `close`) of `HRIMessage`s:
+
+-   Multimodal messages: text, `rai.content.Image`s and `rai.content.Audio`
+-   Message sequencing and conversation IDs
+-   No LLM framework types: agents convert messages at the LLM boundary (`rai.messages`)
 
 ### Concrete Implementations
 
@@ -52,8 +54,7 @@ Connectors are generic over message types derived from BaseMessage:
 
 -   **BaseMessage**: Foundation message type with payload and metadata
 -   **ROS2Message**: Message type for ROS 2 communication
--   **HRIMessage**: Multimodal message type with text, images, and audio
--   **ROS2HRIMessage**: HRIMessage specialized for ROS 2 transport
+-   **HRIMessage**: Multimodal message with text, images, and audio (a dataclass, not a BaseMessage)
 -   **SoundDeviceMessage**: Specialized message for audio operations
 
 ### Communication Patterns

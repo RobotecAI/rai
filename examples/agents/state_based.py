@@ -32,21 +32,18 @@ def main():
     ros2_connector = ROS2Connector()
 
     camera, logs = ROS2ImgVLMDiffAggregator(), ROS2LogsAggregator()
-    ros2_connector.register_callback(
-        "/camera/camera/color/image_raw",
-        camera,
-        raw=True,
-        msg_type="sensor_msgs/msg/Image",
+    ros2_connector.subscribe(
+        "/camera/camera/color/image_raw", camera, msg_type="sensor_msgs/msg/Image"
     )
     # if msg_type is not provided, the topic has to exist
-    ros2_connector.register_callback("/rosout", logs, raw=True)
+    ros2_connector.subscribe("/rosout", logs)
 
     agent = StateBasedAgent(
         tools=ROS2Toolkit(connector=ros2_connector).get_tools(),
         state_sources={"camera": camera.observe, "/rosout": logs.observe},
     )
     agent.subscribe(HRIOutput(hri_connector_sender(hri_connector, "to_human")))
-    hri_connector.register_callback("/from_human", agent.submit)
+    hri_connector.subscribe("/from_human", agent.submit)
     rai.run(agent)
 
 

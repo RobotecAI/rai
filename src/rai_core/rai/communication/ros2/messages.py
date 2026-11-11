@@ -12,89 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import importlib.util
-import logging
-from typing import List, Literal, cast
-from uuid import uuid4
-
-import numpy as np
-from PIL import Image
-from pydub import AudioSegment
-from sensor_msgs.msg import Image as ROS2Image
-
 from rai.communication.base_connector import BaseMessage
-from rai.communication.hri_connector import HRIMessage
-from rai.communication.ros2.images import imgmsg_to_numpy, numpy_to_imgmsg
-
-if importlib.util.find_spec("rai_interfaces") is None:
-    logging.warning("rai_interfaces is not installed, ROS 2 HRIMessage will not work.")
-else:
-    import rai_interfaces.msg
-    from rai_interfaces.msg import HRIMessage as ROS2HRIMessage_
-    from rai_interfaces.msg._audio_message import (
-        AudioMessage as ROS2HRIMessage__Audio,
-    )
 
 
 class ROS2Message(BaseMessage):
     pass
-
-
-class ROS2HRIMessage(HRIMessage, ROS2Message):
-    @classmethod
-    def from_ros2(
-        cls,
-        msg: "rai_interfaces.msg.HRIMessage",
-        message_author: Literal["ai", "human"],
-    ):
-        images = [
-            imgmsg_to_numpy(img_msg, "rgb8")
-            for img_msg in cast(List[ROS2Image], msg.images)
-        ]
-        pil_images = [Image.fromarray(img) for img in images]
-        audio_segments = [
-            AudioSegment(
-                data=audio_msg.audio,
-                frame_rate=audio_msg.sample_rate,
-                sample_width=2,  # bytes, int16
-                channels=audio_msg.channels,
-            )
-            for audio_msg in cast(List[ROS2HRIMessage__Audio], msg.audios)
-        ]
-        communication_id = msg.communication_id if msg.communication_id != "" else None
-        return cls(
-            text=msg.text,
-            images=pil_images,
-            audios=audio_segments,
-            message_author=message_author,
-            communication_id=communication_id,
-            seq_no=msg.seq_no,
-            seq_end=msg.seq_end,
-        )
-
-    def to_ros2_msg(self) -> "rai_interfaces.msg.HRIMessage":
-        """The rai_interfaces message, built directly (no dict round trip)."""
-        img_msgs = [
-            numpy_to_imgmsg(np.array(img.convert("RGB")), "rgb8") for img in self.images
-        ]
-        audio_msgs = [
-            ROS2HRIMessage__Audio(
-                audio=audio.raw_data,
-                sample_rate=audio.frame_rate,
-                channels=audio.channels,
-            )
-            for audio in self.audios
-        ]
-
-        return ROS2HRIMessage_(
-            text=self.text,
-            images=img_msgs,
-            audios=audio_msgs,
-            communication_id=self.communication_id or "",
-            seq_no=self.seq_no,
-            seq_end=self.seq_end,
-        )
-
-    @staticmethod
-    def generate_conversation_id() -> str:
-        return str(uuid4())

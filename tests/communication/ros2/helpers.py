@@ -23,8 +23,6 @@ import numpy as np
 import pytest
 import rclpy
 from nav2_msgs.action import NavigateToPose
-from pydub import AudioSegment
-from rai.communication.ros2.images import numpy_to_imgmsg
 from rclpy.action import ActionClient, ActionServer, CancelResponse, GoalResponse
 from rclpy.action.server import ServerGoalHandle
 from rclpy.callback_groups import CallbackGroup, ReentrantCallbackGroup
@@ -35,35 +33,6 @@ from sensor_msgs.msg import Image
 from std_msgs.msg import String
 from std_srvs.srv import SetBool
 from tf2_ros import TransformBroadcaster, TransformStamped
-
-from rai_interfaces.msg import HRIMessage
-
-
-class HRIMessagePublisher(Node):
-    def __init__(self, topic: str):
-        super().__init__("test_hri_message_publisher")
-        self.publisher = self.create_publisher(HRIMessage, topic, 10)
-        self.timer = self.create_timer(0.1, self.publish_message)
-
-    def publish_message(self) -> None:
-        msg = HRIMessage()
-        image = numpy_to_imgmsg(np.zeros((100, 100, 3), dtype=np.uint8), "rgb8")
-        msg.images = [image]
-        msg.audios = [AudioSegment.silent(duration=1000)]
-        msg.text = "Hello, HRI!"
-        self.publisher.publish(msg)
-
-
-class HRIMessageSubscriber(Node):
-    def __init__(self, topic: str):
-        super().__init__("test_hri_message_subscriber")
-        self.subscription = self.create_subscription(
-            HRIMessage, topic, self.handle_test_message, 10
-        )
-        self.received_messages: List[HRIMessage] = []
-
-    def handle_test_message(self, msg: HRIMessage) -> None:
-        self.received_messages.append(msg)
 
 
 class ServiceServer(Node):

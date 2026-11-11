@@ -181,11 +181,11 @@ def time_calls(fns: list[Callable[[], Any]]) -> dict[str, Any]:
 def close(connector: Any, timeout: float = 5.0) -> float:
     """Shut a connector down without letting a hang block the benchmark."""
     t0 = time.perf_counter()
-    thread = threading.Thread(target=connector.shutdown, daemon=True)
+    thread = threading.Thread(target=connector.close, daemon=True)
     thread.start()
     thread.join(timeout)
     if thread.is_alive():
-        raise TimeoutError(f"shutdown() did not return in {timeout}s")
+        raise TimeoutError(f"close() did not return in {timeout}s")
     return time.perf_counter() - t0
 
 
@@ -222,13 +222,10 @@ def connector_bench(
 
 
 def bench_publish(n: int) -> dict[str, Any]:
-    from PIL import Image
-    from rai.communication.ros2 import (
-        ROS2Connector,
-        ROS2HRIConnector,
-        ROS2HRIMessage,
-        ROS2Message,
-    )
+    import numpy as np
+    from rai.communication import HRIMessage
+    from rai.communication.ros2 import ROS2Connector, ROS2HRIConnector, ROS2Message
+    from rai.content import Image
 
     out: dict[str, Any] = {}
     connector = ROS2Connector()
@@ -258,11 +255,9 @@ def bench_publish(n: int) -> dict[str, Any]:
         close(connector)
     hri = ROS2HRIConnector()
     try:
-        message = ROS2HRIMessage(
-            text="hi", images=[Image.new("RGB", (640, 480))], message_author="ai"
-        )
+        message = HRIMessage("hi", [Image(np.zeros((480, 640, 3), np.uint8))])
         out["hri_vga"] = time_calls(
-            [lambda: hri.send_message(message, PUB_HRI)] * max(n // 40, 5)
+            [lambda: hri.sync.send(PUB_HRI, message)] * max(n // 40, 5)
         )
     finally:
         close(hri)
@@ -315,9 +310,10 @@ def bench_dispatch(
 
         if kind == "string":
             connector.register_callback(topic, callback, raw=True, msg_type=STRING)
+        elif kind == "hri":
+            connector.subscribe(topic, callback)
         else:
             msg_type = {
-                "hri": None,
                 "image": "sensor_msgs/msg/Image",
                 "cloud": "sensor_msgs/msg/PointCloud2",
             }[kind]

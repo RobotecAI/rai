@@ -80,14 +80,15 @@ class HRIOutput:
 
 
 def hri_connector_sender(connector: Any, target: str) -> Callable[[HRIChunk], None]:
-    """A ``send`` for an :class:`~rai.communication.HRIConnector` such as
-    ``ROS2HRIConnector``: publishes each chunk to ``target`` as an AI message."""
-    from langchain_core.messages import AIMessage
+    """A ``send`` for a connector with a blocking ``sync.send`` such as
+    ``ROS2HRIConnector``: publishes each chunk to ``target`` as an HRIMessage
+    whose communication_id is the turn."""
+    from rai.communication.hri_connector import HRIMessage
 
     def send(chunk: HRIChunk) -> None:
-        message = connector.build_message(
-            AIMessage(chunk.text), chunk.turn, chunk.seq, chunk.end
+        message = HRIMessage(
+            chunk.text, communication_id=chunk.turn, seq_no=chunk.seq, seq_end=chunk.end
         )
-        connector.send_message(message, target)
+        connector.sync.send(target, message)
 
     return send

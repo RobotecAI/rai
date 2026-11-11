@@ -27,7 +27,7 @@ def main():
     agent = ReActAgent(tools=ROS2Toolkit(connector=ros2_connector).get_tools())
     agent.subscribe(HRIOutput(hri_connector_sender(hri_connector, "/to_human")))
     # Agent will wait for messages published to /from_human ros2 topic
-    hri_connector.register_callback("/from_human", agent.submit)
+    hri_connector.subscribe("/from_human", agent.submit)
     rai.run(agent)
 
 
