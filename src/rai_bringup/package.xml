@@ -24,6 +24,7 @@
   <exec_depend>sensor_msgs_py</exec_depend>
   <exec_depend>tf2_geometry_msgs</exec_depend>
   <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>trajectory_msgs</exec_depend>
   <exec_depend>portaudio19-dev</exec_depend>
 
   <test_depend>python3-pytest</test_depend>

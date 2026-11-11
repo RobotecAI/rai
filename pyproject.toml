@@ -91,6 +91,9 @@ banned-module-level-imports = [
     "langchain_openai",
     "langfuse",
     "streamlit",
+    "msgpack",
+    "websockets",
+    "zmq",
 ]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]

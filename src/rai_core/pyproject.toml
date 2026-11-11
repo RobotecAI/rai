@@ -42,7 +42,14 @@ ollama = ["langchain-ollama>=1.0.0,<2.0.0"]
 langfuse = ["langfuse>=5.0.0,<6.0.0"]
 mcp = ["mcp>=1.20.0,<2.0.0", "langchain-mcp-adapters>=0.3.0,<1.0.0"]
 ui = ["streamlit>=1.67,<2.0.0", "tomli-w>=1.1.0,<2.0.0"]
-all = ["rai_core[openai,anthropic,aws,google,ollama,langfuse,mcp,ui]"]
+# Clients of learned-policy (VLA) servers: openpi (websocket), GR00T (ZMQ), HTTP.
+policies = [
+    "websockets>=13.0,<18.0",
+    "msgpack>=1.0.5,<2.0.0",
+    "pyzmq>=26.0.0,<28.0.0",
+    "httpx>=0.27.0,<1.0.0",
+]
+all = ["rai_core[openai,anthropic,aws,google,ollama,langfuse,mcp,ui,policies]"]
 
 [tool.uv.build-backend]
 module-root = ""
