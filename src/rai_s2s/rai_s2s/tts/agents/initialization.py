@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import tomllib
 from dataclasses import dataclass
 from typing import Optional
+
+from pydantic import BaseModel
+from rai.settings import section
 
 
 @dataclass
@@ -37,16 +39,17 @@ class TTSAgentConfig:
     speaker: SpeakerConfig
 
 
+class TTSSettings(BaseModel):
+    """The `[tts]` table of rai.toml (or `RAI_TTS__<FIELD>` env vars)."""
+
+    vendor: str = TTS_MODELS[0]
+    voice: str = ""
+    speaker_device_name: str = "default"
+
+
 def load_config(config_path: Optional[str] = None) -> TTSAgentConfig:
-    if config_path is None:
-        with open("config.toml", "rb") as f:
-            config_dict = tomllib.load(f)
-    else:
-        with open(config_path, "rb") as f:
-            config_dict = tomllib.load(f)
+    tts = section("tts", TTSSettings, config_path)
     return TTSAgentConfig(
-        text_to_speech=TTSConfig(
-            model_type=config_dict["tts"]["vendor"], voice=config_dict["tts"]["voice"]
-        ),
-        speaker=SpeakerConfig(device_name=config_dict["tts"]["speaker_device_name"]),
+        text_to_speech=TTSConfig(model_type=tts.vendor, voice=tts.voice),
+        speaker=SpeakerConfig(device_name=tts.speaker_device_name),
     )

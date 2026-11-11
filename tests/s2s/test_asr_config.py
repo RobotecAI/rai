@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""VAD and wake word thresholds come from config.toml, where an out-of-range
+"""VAD and wake word thresholds come from rai.toml, where an out-of-range
 value silently turns detection permanently on or permanently off."""
 
 import pytest

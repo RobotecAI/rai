@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import tomllib
 from dataclasses import dataclass
 from typing import Literal, Optional
+
+from pydantic import BaseModel
+from rai.settings import section
 
 
 @dataclass
@@ -87,31 +89,40 @@ class ASRAgentConfig:
     microphone: MicrophoneConfig
 
 
+class ASRSettings(BaseModel):
+    """The `[asr]` table of rai.toml (or `RAI_ASR__<FIELD>` env vars)."""
+
+    recording_device_name: str = "default"
+    transcription_model: str = TRANSCRIBE_MODELS[0]
+    transcription_model_name: str = "tiny"
+    language: str = "en"
+    vad_model: str = "SileroVAD"
+    vad_threshold: float = 0.5
+    silence_grace_period: float = 0.3
+    use_wake_word: bool = False
+    wake_word_model: str = "OpenWakeWord"
+    wake_word_model_name: str = ""
+    wake_word_threshold: float = 0.01
+
+
 def load_config(config_path: Optional[str] = None) -> ASRAgentConfig:
-    if config_path is None:
-        with open("config.toml", "rb") as f:
-            config_dict = tomllib.load(f)
-    else:
-        with open(config_path, "rb") as f:
-            config_dict = tomllib.load(f)
+    asr = section("asr", ASRSettings, config_path)
     return ASRAgentConfig(
         voice_activity_detection=VADConfig(
-            model_name=config_dict["asr"]["vad_model"],
-            threshold=config_dict["asr"]["vad_threshold"],
-            silence_grace_period=config_dict["asr"]["silence_grace_period"],
+            model_name=asr.vad_model,  # type: ignore[arg-type]
+            threshold=asr.vad_threshold,
+            silence_grace_period=asr.silence_grace_period,
         ),
         wakeword=WWConfig(
-            model_type=config_dict["asr"]["wake_word_model"],
-            model_name=config_dict["asr"]["wake_word_model_name"],
-            threshold=config_dict["asr"]["wake_word_threshold"],
-            is_used=config_dict["asr"]["use_wake_word"],
+            model_type=asr.wake_word_model,  # type: ignore[arg-type]
+            model_name=asr.wake_word_model_name,
+            threshold=asr.wake_word_threshold,
+            is_used=asr.use_wake_word,
         ),
         transcribe=TranscribeConfig(
-            model_type=config_dict["asr"]["transcription_model"],
-            model_name=config_dict["asr"]["transcription_model_name"],
-            language=config_dict["asr"]["language"],
+            model_type=asr.transcription_model,
+            model_name=asr.transcription_model_name,
+            language=asr.language,
         ),
-        microphone=MicrophoneConfig(
-            device_name=config_dict["asr"]["recording_device_name"],
-        ),
+        microphone=MicrophoneConfig(device_name=asr.recording_device_name),
     )

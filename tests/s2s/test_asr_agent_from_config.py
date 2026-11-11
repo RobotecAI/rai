@@ -42,7 +42,7 @@ wake_word_threshold = 0.5
 @pytest.fixture
 def config(tmp_path: Path):
     def write(transcription_model: str, vad_model: str = "SileroVAD") -> str:
-        path = tmp_path / "config.toml"
+        path = tmp_path / "rai.toml"
         path.write_text(
             CONFIG.format(transcription_model=transcription_model, vad_model=vad_model)
         )
