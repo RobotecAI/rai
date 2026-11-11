@@ -20,11 +20,8 @@ guide and tutorials. 📚
 [![arXiv](https://img.shields.io/badge/arXiv-2505.07532-b31b1b.svg)](https://arxiv.org/abs/2505.07532)
 
 ![Static Badge](https://img.shields.io/badge/Ubuntu-24.04-orange)
-![Static Badge](https://img.shields.io/badge/Ubuntu-22.04-orange)
 ![Static Badge](https://img.shields.io/badge/Python-3.12-blue)
-![Static Badge](https://img.shields.io/badge/Python-3.10-blue)
 ![Static Badge](https://img.shields.io/badge/ROS2-jazzy-blue)
-![Static Badge](https://img.shields.io/badge/ROS2-humble-blue)
 
 [![](https://dcbadge.limes.pink/api/server/https://discord.gg/3PGHgTaJSB)](https://discord.gg/3PGHgTaJSB)
 
@@ -51,7 +48,6 @@ guide and tutorials. 📚
 -   [x] rai_sim: Package for connecting RAI to simulation environments.
 -   [x] rai_bench: Benchmarking suite for RAI. Test agents, models, tools, simulators, etc.
 -   [x] rai_perception: Object detection tools based on open-set models and machine learning techniques.
--   [x] rai_nomad: Integration with NoMaD for navigation.
 -   [ ] rai_finetune: Finetune LLMs on your embodied data.
 
 ### Getting started

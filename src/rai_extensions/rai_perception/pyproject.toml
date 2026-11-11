@@ -1,12 +1,12 @@
 [project]
 name = "rai-perception"
 # TODO, update the version once it is published to PyPi
-version = "0.4.0"
+version = "0.5.0"
 description = "Package for object detection, segmentation and gripping point detection."
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.12,<3.13"
 authors = [
     { name = "Maciej Majek", email = "maciej.majek@robotec.ai" },
     { name = "Julia Jia", email = "juliajster@gmail.com" },
@@ -16,7 +16,7 @@ dependencies = [
     "torch>=2.11.0,<3.0.0",
     "torchvision>=0.26.0,<1.0.0",
     "rai-gsam2>=1.1.2,<2.0.0",
-    "rai_core>=2.0.0a2,<3.0.0",
+    "rai_core>=2.15.0,<3.0.0",
     "scikit-learn>=1.5.0,<2.0.0",
     # Grounding DINO runs on the transformers implementation (AutoModelForZeroShotObjectDetection).
     "transformers>=5.10.0,<6.0.0",

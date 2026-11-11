@@ -22,9 +22,9 @@ from unittest.mock import MagicMock
 import numpy as np
 import pytest
 import rclpy
-from cv_bridge import CvBridge
 from nav2_msgs.action import NavigateToPose
 from pydub import AudioSegment
+from rai.communication.ros2.image_bridge import CvBridge
 from rclpy.action import ActionClient, ActionServer, CancelResponse, GoalResponse
 from rclpy.action.server import ServerGoalHandle
 from rclpy.callback_groups import CallbackGroup, ReentrantCallbackGroup
@@ -415,7 +415,7 @@ def shutdown_executors_and_threads(
         try:
             if node is not None:
                 # Check if node is still valid before destroying
-                # In ROS2 Humble, accessing destroyed nodes can cause segfaults
+                # Accessing an already destroyed node can segfault
                 try:
                     # Try a safe operation to check if node is still valid
                     _ = node.get_name()
@@ -428,13 +428,11 @@ def shutdown_executors_and_threads(
 
 
 def _create_time_with_to_msg_class():
-    """Create a TimeWithToMsg class for ROS2 Humble/Jazzy compatibility.
+    """Create a TimeWithToMsg class: a real BuiltinTime that also has to_msg().
 
-    ROS2 Humble vs Jazzy difference:
-    - Humble: Strict type checking in __debug__ mode requires actual BuiltinTime
-      instances, not MagicMock objects. Using MagicMock causes AssertionError.
-    - Jazzy: More lenient with MagicMock, but BuiltinTime instances don't allow
-      dynamically adding methods (AttributeError when accessing to_msg).
+    BuiltinTime instances don't allow dynamically adding methods (AttributeError
+    when accessing to_msg), and a plain MagicMock cannot be assigned to a message
+    stamp, which needs a real BuiltinTime.
 
     Solution: Create a wrapper class that inherits from BuiltinTime and adds to_msg().
     This is used by both create_mock_connector_with_clock() and setup_mock_clock()
@@ -454,8 +452,8 @@ def _create_time_with_to_msg_class():
 def create_mock_connector_with_clock() -> Any:
     """Create a mock ROS2Connector with properly configured clock for testing.
 
-    This helper creates a mock connector that works with ROS2 Humble's strict
-    type checking for Time messages. The clock's now().to_msg() returns a real
+    This helper creates a mock connector that works with the strict type checking
+    of Time message fields. The clock's now().to_msg() returns a real
     builtin_interfaces.msg.Time instance that can be assigned to message stamps.
 
     This is similar to setup_mock_clock() in test_grounding_dino.py but creates
@@ -486,11 +484,8 @@ def create_mock_connector_with_clock() -> Any:
 def create_mock_clock_with_time(use_time_wrapper: bool = False):
     """Create a mock clock that returns a compatible Time message.
 
-    This utility handles ROS2 Humble vs Jazzy differences:
-    - Humble: Strict type checking in __debug__ mode requires actual BuiltinTime
-      instances, not MagicMock objects. Using MagicMock causes AssertionError.
-    - Jazzy: More lenient with MagicMock, but BuiltinTime instances don't allow
-      dynamically adding methods (AttributeError when accessing to_msg).
+    Message stamps need a real BuiltinTime, and BuiltinTime instances don't allow
+    dynamically adding methods (AttributeError when accessing to_msg).
 
     Parameters
     ----------

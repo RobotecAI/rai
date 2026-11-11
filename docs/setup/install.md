@@ -1,6 +1,6 @@
 # Quick setup guide
 
-Before going further, make sure you have ROS 2 (jazzy or humble) installed and sourced on your system.
+Before going further, make sure you have ROS 2 Jazzy installed and sourced on your system.
 
 !!! tip "Docker images"
 
@@ -17,7 +17,7 @@ There are two ways to start using RAI:
 
 ??? tip "Virtual environment"
 
-    We recommend installing RAI in a virtual environment (e.g., [virtualenv](https://docs.python.org/3/library/venv.html) or [uv](https://docs.astral.sh/uv/)) to keep your dependencies organized. Make sure to use the same version of python as the one used for ROS 2 (typically `python3.10` for Humble and `python3.12` for Jazzy).
+    We recommend installing RAI in a virtual environment (e.g., [virtualenv](https://docs.python.org/3/library/venv.html) or [uv](https://docs.astral.sh/uv/)) to keep your dependencies organized. Make sure to use the same version of python as the one used for ROS 2 (`python3.12` for Jazzy).
 
     If you plan to use ROS 2 commands (`ros2 run` or `ros2 launch`), you'll need to add your virtual environment's Python packages to your `$PYTHONPATH`. This step is only necessary for ROS 2 integration - if you're just running RAI directly with Python, you can skip this step.
 
@@ -43,7 +43,7 @@ There are two ways to start using RAI:
 
 !!! important "Package availability"
 
-    `rai_perception` and `rai_nomad` are not yet available through pip. If your workflow relies on openset detection or NoMaD integration, please refer to the
+    `rai_perception` is not yet available through pip. If your workflow relies on openset detection, please refer to the
     [developer environment instructions](#setting-up-developer-environment) setup.
 
     `rai_interfaces` is available as `apt` package. However, due to package distribution delays, the latest version may not be immediately available. If you encounter missing imports, please build `rai_interfaces` from [source](https://github.com/RobotecAI/rai_interfaces).
@@ -109,11 +109,11 @@ rosdep install --from-paths src --ignore-src -r -y
 !!! tip "Additional dependencies"
 
     RAI is modular. If you want to use features such as
-    speech-to-speech, simulation and benchmarking suite, openset detection, or NoMaD integration,
+    speech-to-speech, simulation and benchmarking suite, or openset detection,
     install additional dependencies:
 
     ```bash
-    uv sync --group perception --group nomad --group s2s --group simbench # or `--all-groups` for full setup
+    uv sync --group perception --group s2s --group simbench # or `--all-groups` for full setup
     ```
 
     | Group Name | Description | Dependencies |
@@ -121,7 +121,6 @@ rosdep install --from-paths src --ignore-src -r -y
     | [s2s][s2s] | Speech-to-Speech functionality | rai_asr, rai_tts |
     | [simbench][simbench] | Simulation and benchmarking tools | rai_sim, rai_bench |
     | [perception][perception] | Open-set detection capabilities | groundingdino, groundedsam |
-    | [nomad][nomad] | Visual Navigation - NoMaD integration | visualnav_transformer |
     | docs | Documentation-related dependencies | mkdocs, mkdocs-material, pymdown-extensions |
 
     KokoroTTS is not included in the `s2s` group because its dependencies are GPL-3.0 licensed. Install it explicitly with `uv pip install -e "src/rai_s2s[kokoro]"` (a later `uv sync` removes it again unless run with `--inexact`).
@@ -171,4 +170,3 @@ Pick your local solution or service provider and follow one of these guides:
 [s2s]: ../tutorials/voice_interface.md
 [simbench]: ../simulation_and_benchmarking/overview.md
 [perception]: ../extensions/perception.md
-[nomad]: ../extensions/nomad.md

@@ -30,8 +30,8 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 import torch
-from cv_bridge import CvBridge
 from PIL import Image as PILImage
+from rai.communication.ros2.image_bridge import CvBridge
 from rclpy.time import Time
 from sensor_msgs.msg import Image
 from std_msgs.msg import Header

@@ -103,9 +103,9 @@
 
     !!! question "What are the requirements?"
 
-        -   ROS 2 Humble or Jazzy
-        -   Python 3.10 or 3.12
-        -   Ubuntu 22.04 or 24.04
+        -   ROS 2 Jazzy
+        -   Python 3.12
+        -   Ubuntu 24.04
 
     !!! question "How about a robot?"
 

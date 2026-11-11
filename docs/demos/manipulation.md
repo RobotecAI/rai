@@ -16,7 +16,7 @@ manipulation techniques.
 
 !!! tip "ROS 2 Sourced"
 
-    Make sure ROS 2 is sourced. (e.g. `source /opt/ros/humble/setup.bash`)
+    Make sure ROS 2 is sourced. (e.g. `source /opt/ros/jazzy/setup.bash`)
 
 ### Local Setup
 
@@ -124,7 +124,7 @@ manipulation techniques.
 5.  Run the docker container with the following command:
 
     ```shell
-    docker run -p 8501:8501 -e DISPLAY=$DISPLAY -e OPENAI_API_KEY=$OPENAI_API_KEY -v /tmp/.X11-unix:/tmp/.X11-unix --gpus all -it rai-manipulation-demo:jazzy # or rai-manipulation-demo:humble
+    docker run -p 8501:8501 -e DISPLAY=$DISPLAY -e OPENAI_API_KEY=$OPENAI_API_KEY -v /tmp/.X11-unix:/tmp/.X11-unix --gpus all -it rai-manipulation-demo:jazzy
     ```
 
     !!! tip "NVIDIA Container Toolkit"

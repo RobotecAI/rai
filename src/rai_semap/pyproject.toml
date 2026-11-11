@@ -1,19 +1,19 @@
 [project]
 name = "rai_semap"
-version = "0.1.0"
+version = "0.2.0"
 description = "Semantic mapping and spatial memory for RAI"
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.12,<3.13"
 authors = [{ name = "Julia Jia" }]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Development Status :: 4 - Beta",
 ]
 dependencies = [
-    "rai_core",
-    "rai_perception",
+    "rai_core>=2.15.0,<3.0.0",
+    "rai_perception>=0.5.0,<1.0.0",
 ]
 
 [dependency-groups]

@@ -23,8 +23,8 @@ This module contains perception layer logic:
 from typing import Optional, Tuple
 
 import numpy as np
-from cv_bridge import CvBridge
 from geometry_msgs.msg import Point, Pose, Quaternion
+from rai.communication.ros2.image_bridge import CvBridge
 from sensor_msgs.msg import CameraInfo, Image
 from vision_msgs.msg import Detection2D
 

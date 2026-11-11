@@ -5,7 +5,7 @@ description = "RAI is a framework for building general multi-agent systems, brin
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.12,<3.13"
 authors = [
     { name = "Maciej Majek", email = "maciej.majek@robotec.ai" },
     { name = "Bartlomiej Boczek", email = "bartlomiej.boczek@robotec.ai" },
@@ -37,17 +37,9 @@ s2s = ["rai_s2s[all]"]
 semap = ["rai_semap"]
 simbench = ["rai_sim", "rai_bench"]
 perception = ["rai_perception"]
-nomad = [
-    "visualnav_transformer @ git+https://github.com/RobotecAI/visualnav-transformer-ros2.git@bdced61b2499f52f755454ebca0fb415adfc4d25",
-    "gdown>=5.2.0,<6.0.0",
-]
 
 [tool.uv]
 package = false
-# diffusion_policy is pulled in by visualnav_transformer from its main branch; pin the commit.
-override-dependencies = [
-    "diffusion-policy @ git+https://github.com/RobotecAI/diffusion_policy.git@2356a7fbbfaf0ccccf9883b972b5a434d0f5ede3",
-]
 
 [tool.uv.sources]
 rai_core = { path = "src/rai_core", editable = true }
@@ -88,7 +80,7 @@ markers = [
     "ci_only: marks test as cli only (deselect with '-m \"not ci_only\"')",
     "manual: marks tests as manual (may require demo app to be running, deselect with '-m \"manual\")",
 ]
-# ROS 2 (Humble and Jazzy) auto-loads launch_testing pytest plugins that are incompatible with pytest 9.
+# ROS 2 Jazzy auto-loads launch_testing pytest plugins that are incompatible with pytest 9.
 # RAI does not use launch tests, so they are disabled.
 addopts = "-m 'not billable and not ci_only and not manual' --ignore=src -p no:launch_testing -p no:launch_ros"
 log_cli = true

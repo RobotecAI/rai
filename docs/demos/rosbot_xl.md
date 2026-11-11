@@ -14,7 +14,7 @@ platform in a nice apartment.
 
 !!! tip "ROS 2 Sourced"
 
-    Make sure ROS 2 is sourced. (e.g. `source /opt/ros/humble/setup.bash`)
+    Make sure ROS 2 is sourced. (e.g. `source /opt/ros/jazzy/setup.bash`)
 
 1. Follow the RAI setup instructions in the [quick setup guide](../setup/install.md#setting-up-developer-environment).
 

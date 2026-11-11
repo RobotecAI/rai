@@ -16,7 +16,7 @@ how to:
 
 Before proceeding, ensure you have:
 
--   ROS 2 (humble or jazzy) installed and properly set up
+-   ROS 2 Jazzy installed and properly set up
 -   RAI installed and configured
 
 ## Creating a Custom Agent

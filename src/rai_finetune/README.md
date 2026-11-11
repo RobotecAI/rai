@@ -56,7 +56,7 @@ src/rai_finetune/rai_finetune/
 
 ## Environment Setup
 
-This module utilizes `unsloth` which works with Python 3.10, 3.11, and 3.12. Python 3.12+ has Dynamo compatibility issues with `unsloth`; see [issue reference](https://github.com/unslothai/unsloth/issues/886). Thus Python 3.10 is selected for its compatibility with the rest of RAI components. The instructions below are targeted for Linux.
+This module utilizes `unsloth` which works with Python 3.10, 3.11, and 3.12. Python 3.12+ has Dynamo compatibility issues with `unsloth`; see [issue reference](https://github.com/unslothai/unsloth/issues/886). Thus Python 3.10 is selected. The rest of RAI requires Python 3.12, so rai_finetune needs its own virtual environment; it is not part of the uv workspace. The instructions below are targeted for Linux.
 
 ### 1. Install System Dependencies
 

@@ -10,8 +10,8 @@ The package includes model-agnostic ROS2 service nodes (`DetectionService` and `
 
 Before installing `rai-perception`, ensure you have:
 
-1. **ROS2 installed** (Jazzy recommended, or Humble). If you don't have ROS2 yet, follow the official ROS2 installation guide for [jazzy](https://docs.ros.org/en/jazzy/Installation.html) or [humble](https://docs.ros.org/en/humble/Installation.html).
-2. **Python 3.8+** and `pip` installed (usually pre-installed on Ubuntu).
+1. **ROS2 Jazzy installed**. If you don't have ROS2 yet, follow the official [ROS2 Jazzy installation guide](https://docs.ros.org/en/jazzy/Installation.html).
+2. **Python 3.12** and `pip` installed (usually pre-installed on Ubuntu).
 3. **NVIDIA GPU** with CUDA support (required for optimal performance).
 4. **wget** installed (required for downloading model weights):
     ```bash
@@ -23,11 +23,7 @@ Before installing `rai-perception`, ensure you have:
 **Step 1:** Source ROS2 in your terminal:
 
 ```bash
-# For ROS2 Jazzy (recommended)
 source /opt/ros/jazzy/setup.bash
-
-# For ROS2 Humble
-source /opt/ros/humble/setup.bash
 ```
 
 **Step 2:** Install ROS2 dependencies. `rai-perception` requires its ROS2 packages that needs to be installed separately:
@@ -37,7 +33,7 @@ source /opt/ros/humble/setup.bash
 sudo apt update
 
 # Install rai_interfaces as a debian package
-sudo apt install ros-jazzy-rai-interfaces  # or ros-humble-rai-interfaces for Humble
+sudo apt install ros-jazzy-rai-interfaces
 ```
 
 **Step 3:** Install `rai-perception` via pip:
@@ -53,7 +49,7 @@ pip install rai-perception
 > To avoid sourcing ROS2 in every new terminal, add the source command to your `~/.bashrc` file:
 >
 > ```bash
-> echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc  # or humble
+> echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc
 > ```
 
 <!--- --8<-- [end:sec1] -->
@@ -71,7 +67,7 @@ After installing `rai-perception`, launch the perception services:
 **Step 1:** Open a terminal and source ROS2:
 
 ```bash
-source /opt/ros/jazzy/setup.bash  # or humble
+source /opt/ros/jazzy/setup.bash
 ```
 
 **Step 2:** Launch the perception services:
@@ -96,7 +92,7 @@ The `rai_perception/talker.py` example demonstrates how to use the perception se
 **Step 1:** Open a terminal and source ROS2:
 
 ```bash
-source /opt/ros/jazzy/setup.bash  # or humble
+source /opt/ros/jazzy/setup.bash
 ```
 
 **Step 2:** Launch the perception services:
@@ -108,7 +104,7 @@ python -m rai_perception.scripts.run_perception_services
 **Step 3:** In a different terminal (remember to source ROS2 first), run the example client:
 
 ```bash
-source /opt/ros/jazzy/setup.bash  # or humble
+source /opt/ros/jazzy/setup.bash
 python -m rai_perception.examples.talker --ros-args -p image_path:="<path-to-image>"
 ```
 

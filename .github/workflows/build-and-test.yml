@@ -30,7 +30,6 @@ jobs:
       matrix:
         ros_distro:
           - jazzy
-          - humble
 
     container:
       image: osrf/ros:${{ matrix.ros_distro }}-desktop-full

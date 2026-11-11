@@ -10,5 +10,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # Same checker and config (.licenserc.json) as kt3k/license_checker v1.0.6, but in
+      # a prebuilt Deno image: that action rebuilds an ubuntu:latest image with apt on
+      # every run, which fails whenever the runner cannot reach the Ubuntu mirrors.
       - name: Check License Lines
-        uses: kt3k/license_checker@d12a6d90c58e30fefed09f2c4d03ba57f4c673a8 # v1.0.6
+        uses: docker://denoland/deno@sha256:25bd4946f68c643ba7ce2428a13673ea5fd7123fd868ee36caa60e76607ce0d5 # alpine-1.46.3
+        with:
+          args: run --unstable --allow-read https://deno.land/x/license_checker@v3.1.2/main.ts

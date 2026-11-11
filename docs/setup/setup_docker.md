@@ -14,21 +14,7 @@ git clone https://github.com/RobotecAI/rai.git
 cd rai
 ```
 
-### 1.1. Humble
-
-Core dependencies only:
-
-```bash
-docker build -t rai:humble --build-arg ROS_DISTRO=humble -f docker/Dockerfile .
-```
-
-All dependencies:
-
-```bash
-docker build -t rai:humble --build-arg ROS_DISTRO=humble --build-arg DEPENDENCIES=all_groups -f docker/Dockerfile .
-```
-
-### 1.2. Jazzy
+### 1.1. Jazzy
 
 Core dependencies only:
 
@@ -60,7 +46,7 @@ To allow the container to communicate with the host machine, configure the host 
 1. Source ROS 2 on the host machine:
 
     ```shell
-    source /opt/ros/jazzy/setup.bash # or humble
+    source /opt/ros/jazzy/setup.bash
     ```
 
 2. If not configured, set the `ROS_DOMAIN_ID` environment variable to a domain ID between 0 and 101, inclusive. Example:
@@ -90,13 +76,7 @@ To allow the container to communicate with the host machine, configure the host 
 
 ## 3. Run the docker container
 
-### 3.1. Humble
-
-```bash
-docker run -e ROS_DOMAIN_ID=$ROS_DOMAIN_ID -it rai:humble
-```
-
-### 3.2. Jazzy
+### 3.1. Jazzy
 
 ```bash
 docker run -e ROS_DOMAIN_ID=$ROS_DOMAIN_ID -it rai:jazzy

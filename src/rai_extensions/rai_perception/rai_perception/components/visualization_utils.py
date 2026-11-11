@@ -22,8 +22,8 @@ from typing import Optional
 
 import cv2
 import numpy as np
-from cv_bridge import CvBridge
 from rai.communication.ros2.connectors import ROS2Connector
+from rai.communication.ros2.image_bridge import CvBridge
 from sensor_msgs.msg import CameraInfo, Image
 
 from rai_perception.components.math_utils import quaternion_to_rotation_matrix

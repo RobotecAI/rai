@@ -19,12 +19,12 @@ from typing import Optional, Tuple
 # ROS2 core
 import rclpy
 import yaml
-from cv_bridge import CvBridge
 
 # ROS2 geometry and transforms
 from geometry_msgs.msg import Point, Pose, PoseStamped
 from nav_msgs.msg import OccupancyGrid
 from rai.communication.ros2 import ROS2Connector
+from rai.communication.ros2.image_bridge import CvBridge
 from rai_perception.components.perception_utils import extract_pointcloud_from_bbox
 from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 from rclpy.qos import qos_profile_sensor_data
