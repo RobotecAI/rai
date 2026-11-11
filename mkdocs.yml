@@ -113,6 +113,8 @@ nav:
         - Overview: API_documentation/runners/overview.md
       - Safety:
         - Overview: API_documentation/safety/overview.md
+      - Flight recorder:
+        - Overview: API_documentation/recorder/overview.md
   - Speech to speech:
     - Overview: speech_to_speech/overview.md
     - Agents:

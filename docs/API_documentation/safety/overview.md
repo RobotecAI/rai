@@ -12,7 +12,7 @@ RAI checks robot actions at two hook points, and both fail closed (a hook that d
 | `EStop`            | A latch. While engaged it denies MOTION egress and ACTUATE tool calls. Engaging it cancels every active MOTION goal, including goals of a tool that is already running. Cancels are never gated.                       |
 | `ConfirmActuation` | Opt-in. Asks a human before ACTUATE tool calls and MOTION egress. An approval leases the stream (`lease_s`), so a 30 Hz `cmd_vel` stream is approved once. If nobody answers before the timeout, the action is denied. |
 | `RateLimit`        | A token bucket per tool name and per topic, service or action. Anything over the rate is denied, streams included.                                                                                                     |
-| `AuditLog`         | An observer: it can never deny or block. Writes every decision as JSON lines and passes `AuditRecord`s to subscribers (the flight recorder).                                                                           |
+| `AuditLog`         | An observer: it can never deny or block. Writes every decision as JSON lines and passes `AuditRecord`s to subscribers (the [flight recorder](../recorder/overview.md)).                                                |
 
 ## Usage
 

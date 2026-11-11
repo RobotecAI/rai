@@ -49,7 +49,8 @@ policies = [
     "pyzmq>=26.0.0,<28.0.0",
     "httpx>=0.27.0,<1.0.0",
 ]
-all = ["rai_core[openai,anthropic,aws,google,ollama,langfuse,mcp,ui,policies]"]
+recorder = ["mcap>=1.2.0,<2.0.0", "mcap-ros2-support>=0.5.5,<1.0.0"]
+all = ["rai_core[openai,anthropic,aws,google,ollama,langfuse,mcp,ui,policies,recorder]"]
 
 [tool.uv.build-backend]
 module-root = ""
