@@ -37,17 +37,9 @@ s2s = ["rai_s2s[all]"]
 semap = ["rai_semap"]
 simbench = ["rai_sim", "rai_bench"]
 perception = ["rai_perception"]
-nomad = [
-    "visualnav_transformer @ git+https://github.com/RobotecAI/visualnav-transformer-ros2.git@bdced61b2499f52f755454ebca0fb415adfc4d25",
-    "gdown>=5.2.0,<6.0.0",
-]
 
 [tool.uv]
 package = false
-# diffusion_policy is pulled in by visualnav_transformer from its main branch; pin the commit.
-override-dependencies = [
-    "diffusion-policy @ git+https://github.com/RobotecAI/diffusion_policy.git@2356a7fbbfaf0ccccf9883b972b5a434d0f5ede3",
-]
 
 [tool.uv.sources]
 rai_core = { path = "src/rai_core", editable = true }

@@ -13,5 +13,3 @@ Third-party components:
   (src/rai_extensions/rai_perception/rai_perception/tools/segmentation_tools.py),
   Copyright Yifei Cheng, Apache License 2.0,
   https://github.com/ycheng517/tabletop-handybot
-- visualnav-transformer (portions of src/rai_extensions/rai_nomad/rai_nomad/nomad.py),
-  MIT License, see the copyright and licence notice in that file header

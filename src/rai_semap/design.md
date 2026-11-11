@@ -30,7 +30,7 @@ Based on RAI's current capabilities (perception, navigation, multi-modal interac
 
 1. Semantic Perception Layer: Built on `rai_perception` (open-set detection) with GroundingDINO integration, creating a semantic annotation pipeline that tags SLAM features/points with object identities during mapping
 
-2. Agent Guided Exploration Strategy: Built on `rai_nomad` (navigation) where the agent decides where to explore based on goals ("find the kitchen", "map storage areas") rather than frontier-based exploration. Frontier-based exploration navigates to boundaries between known and unknown map regions to expand coverage.
+2. Agent Guided Exploration Strategy: The agent decides where to explore based on goals ("find the kitchen", "map storage areas") rather than frontier-based exploration. Frontier-based exploration navigates to boundaries between known and unknown map regions to expand coverage.
 
 3. Spatial Memory System: Provides persistent semantic map storage that agents can query ("where did I see tools?") and reason over ("this room is suitable for assembly tasks"). The word _spatial_ refers to 3D location/position information in map coordinates.
 
