@@ -23,8 +23,6 @@ To make it easier to use, RAI implements a `MultimodalMessage` class, which is a
 
 ::: rai.messages.multimodal.SystemMultimodalMessage
 
-::: rai.messages.multimodal.ToolMultimodalMessage
-
 ## Usage
 
 Example:
