@@ -507,18 +507,72 @@ def bench_leak(n_calls: int, n_actions: int, n_register: int):
 
 
 def bench_hooks(n: int) -> Callable[[Any], dict[str, Any]]:
-    """Publish cost with no egress hook and with one allow-all hook."""
+    """Publish cost per call (us) with no egress hook, a hook that does not
+    match, one matching allow hook (sync, async) and one that grants a lease.
+    send_message is the sync path; publish the async one, timed in one loop."""
+
+    def per_call_us(durations: list[float]) -> dict[str, Any]:
+        xs = sorted(durations)
+        return {
+            "p50_us": round(xs[len(xs) // 2] * 1e6, 2),
+            "mean_us": round(sum(xs) / len(xs) * 1e6, 2),
+        }
 
     def run(connector: Any) -> dict[str, Any]:
-        if not hasattr(connector, "hooks"):
-            return {"skipped": "no egress hook API yet (lands in R6)"}
+        import asyncio
+
         from rai.communication.ros2 import ROS2Message
+        from std_msgs.msg import String
 
         msg = ROS2Message(payload={"data": "hello"})
-        publish = lambda: connector.send_message(msg, PUB_SMALL, msg_type=STRING)
-        out = {"hooks_off": time_calls([publish] * n)}
-        connector.hooks.add(lambda egress: None)  # R6: adapt to the final hook API
-        out["hooks_on"] = time_calls([publish] * n)
+        ros_msg = String(data="hello")
+
+        def sync_path() -> dict[str, Any]:
+            durations = []
+            for _ in range(n):
+                t0 = time.perf_counter()
+                connector.send_message(msg, PUB_SMALL, msg_type=STRING)
+                durations.append(time.perf_counter() - t0)
+            return per_call_us(durations)
+
+        async def async_loop() -> list[float]:
+            durations = []
+            for _ in range(n):
+                t0 = time.perf_counter()
+                await connector.publish(PUB_SMALL, ros_msg)
+                durations.append(time.perf_counter() - t0)
+            return durations
+
+        def async_path() -> dict[str, Any]:
+            return per_call_us(asyncio.run(async_loop()))
+
+        def measure() -> dict[str, Any]:
+            sync_path()  # warm up the publisher and the match cache
+            return {"sync": sync_path(), "async": async_path()}
+
+        out: dict[str, Any] = {"off": measure()}
+        if not hasattr(connector, "egress"):
+            return {**out, "skipped": "no egress hook API (R6)"}
+        from rai.communication.ros2.egress import MOTION, Allow
+
+        def allow(egress: Any) -> Any:
+            return Allow()
+
+        async def allow_async(egress: Any) -> Any:
+            return Allow()
+
+        def lease(egress: Any) -> Any:
+            return Allow(lease_s=3600.0)
+
+        for row, hook, types in (
+            ("unmatched", allow, MOTION),
+            ("on", allow, {STRING}),
+            ("on_async", allow_async, {STRING}),
+            ("lease", lease, {STRING}),
+        ):
+            connector.egress.add(hook, types=types)
+            out[row] = measure()
+            connector.egress.remove(hook)
         return out
 
     return run
