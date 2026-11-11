@@ -39,7 +39,7 @@ from mcp.types import (
     TextContent,
     ToolAnnotations,
 )
-from pydantic import ConfigDict
+from pydantic import BaseModel, ConfigDict
 
 from rai.tools import Effect, RaiTool, from_langchain
 
@@ -76,20 +76,27 @@ def mcp_tool(tool: BaseTool) -> Tool:
     always run."""
     rai_tool = tool if isinstance(tool, RaiTool) else from_langchain(tool)
     schema = rai_tool.tool_call_schema
-    parameters = schema if isinstance(schema, dict) else schema.model_json_schema()
+    if isinstance(schema, dict):
+        parameters = schema
+    elif issubclass(schema, BaseModel):
+        parameters = schema.model_json_schema()
+    else:  # a pydantic.v1 model, which langchain still accepts
+        parameters = schema.schema()
 
     async def call(**arguments: Any) -> CallToolResult:
         return await call_tool(rai_tool, arguments)
 
-    call.rai_tool = rai_tool  # type: ignore[attr-defined]  # read by rai_tools
+    setattr(call, "rai_tool", rai_tool)  # read by rai_tools
     return Tool(
         fn=call,
         name=rai_tool.name,
+        title=None,
         description=rai_tool.description,
         parameters=parameters,
         fn_metadata=FuncMetadata(arg_model=_Arguments),
         is_async=True,
         annotations=annotations(rai_tool.effect),
+        context_kwarg=None,
         meta={"rai": {"effect": str(rai_tool.effect), "targets": rai_tool.targets}},
     )
 
@@ -103,7 +110,7 @@ def add_tool(server: FastMCP, tool: BaseTool) -> None:
 def rai_tools(server: FastMCP) -> list[RaiTool]:
     """The RaiTools behind the tools registered on `server` (e.g. for the manifest)."""
     tools = server._tool_manager.list_tools()
-    return [t.fn.rai_tool for t in tools if hasattr(t.fn, "rai_tool")]
+    return [getattr(t.fn, "rai_tool") for t in tools if hasattr(t.fn, "rai_tool")]
 
 
 async def call_tool(tool: RaiTool, arguments: dict[str, Any]) -> CallToolResult:
@@ -172,7 +179,7 @@ def ros2_tools(
         ROS2TopicsToolkit,
     )
 
-    access = dict(
+    access: dict[str, Any] = dict(
         connector=connector, readable=readable, writable=writable, forbidden=forbidden
     )
     toolkits = {

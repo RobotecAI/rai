@@ -15,6 +15,7 @@
 """rai.mcp server and client in one process, over the SDK's in-memory transport (no ROS)."""
 
 import asyncio
+import warnings
 from pathlib import Path
 
 import pytest
@@ -23,13 +24,14 @@ pytest.importorskip("mcp")
 pytest.importorskip("langchain_mcp_adapters")
 
 from langchain_core.messages import ToolMessage
+from langchain_core.tools import StructuredTool
 from langchain_core.tools import tool as lc_tool
 from langchain_mcp_adapters.tools import load_mcp_tools
 from mcp.shared.memory import create_connected_server_and_client_session
 from rai.agents import ReActAgent
 from rai.cli import main
 from rai.mcp import build_server, load_tools
-from rai.mcp.server import load_setup
+from rai.mcp.server import load_setup, mcp_tool
 from rai.mcp.settings import MCPSettings
 from rai.tools import Allow, Deny, Effect, from_langchain, global_tool_hooks, rai_tool
 
@@ -107,6 +109,26 @@ def test_annotations_follow_effects():
         "rai": {"effect": "actuate", "targets": ["/cmd_vel"]}
     }
     assert tools["get_status"].inputSchema["required"] == ["topic"]
+
+
+def test_pydantic_v1_args_schema():
+    """LangChain still accepts pydantic.v1 args schemas; their JSON schema comes from .schema()."""
+    with warnings.catch_warnings():  # pydantic.v1 warns on Python >= 3.14
+        warnings.simplefilter("ignore")
+        from pydantic.v1 import BaseModel as BaseModelV1
+
+        class Args(BaseModelV1):
+            x: int
+
+    def double(x: int) -> int:
+        return 2 * x
+
+    legacy = StructuredTool.from_function(
+        func=double, name="double", description="Double x.", args_schema=Args
+    )
+    schema = mcp_tool(legacy).parameters
+    assert schema["properties"] == {"x": {"title": "X", "type": "integer"}}
+    assert schema["required"] == ["x"]
 
 
 def test_results_and_errors():
