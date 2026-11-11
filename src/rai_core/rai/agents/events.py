@@ -24,7 +24,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
-    from langchain_core.messages import AIMessage
+    from langchain_core.messages import AIMessage, BaseMessage
 
     from rai.agents.base import AgentState
     from rai.tools import Effect
@@ -49,12 +49,25 @@ class TurnEvent(AgentEvent):
 
 @dataclass(frozen=True, kw_only=True)
 class ModelStart(TurnEvent):
-    pass
+    model: str = ""  # the chat model's name, if it has one
+    messages: tuple["BaseMessage", ...] = ()  # system prompt and messages
 
 
 @dataclass(frozen=True, kw_only=True)
 class ModelEnd(TurnEvent):
     message: "AIMessage"
+
+
+@dataclass(frozen=True, kw_only=True)
+class Observation(TurnEvent):
+    """The robot state a StateBasedAgent added to one model request.
+
+    ``values`` maps each state source to its current content (text, or
+    LangChain content blocks); ``fresh`` names the sources that returned a new
+    value for this request (the others kept their last one)."""
+
+    values: dict[str, Any]
+    fresh: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, kw_only=True)

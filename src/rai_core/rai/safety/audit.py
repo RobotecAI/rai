@@ -58,12 +58,15 @@ class AuditRecord:
     targets: tuple[str, ...] = ()  # tool side: the call's ROS targets
     args: Mapping[str, Any] = field(default_factory=dict)  # tool side
     payload: Any = field(default=None, compare=False)  # egress side; not in JSON
+    # time.monotonic_ns() of the decision, for aligning records on another
+    # clock (the flight recorder); not in JSON
+    monotonic_ns: int = field(default_factory=time.monotonic_ns, compare=False)
 
     def to_dict(self) -> dict[str, Any]:
         record = {
             f.name: getattr(self, f.name)
             for f in dataclasses.fields(self)
-            if f.name not in ("payload", "args", "targets")
+            if f.name not in ("payload", "args", "targets", "monotonic_ns")
         }
         if self.side == "tool":
             record["targets"] = list(self.targets)

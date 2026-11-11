@@ -50,6 +50,7 @@ from rai.agents.events import (
     Interrupted,
     ModelEnd,
     ModelStart,
+    Observation,
     ToolEnd,
     ToolStart,
 )
@@ -78,7 +79,17 @@ class _AgentHooks(AgentMiddleware[Any, Any]):
         self.agent = agent
 
     def _before_model(self, request: ModelRequest[Any]) -> ModelRequest[Any]:
-        self.agent.emit(ModelStart(agent=self.agent.name, turn=_TURN.get()))
+        self.agent.emit(
+            ModelStart(
+                agent=self.agent.name,
+                turn=_TURN.get(),
+                model=_model_name(request.model),
+                messages=(
+                    *([system] if (system := request.system_message) else []),
+                    *request.messages,
+                ),
+            )
+        )
         return request.override(messages=with_tool_images(request.messages))
 
     def _after_model(self, response: Any) -> None:
@@ -147,21 +158,35 @@ class _AgentHooks(AgentMiddleware[Any, Any]):
         return result
 
 
+def _model_name(model: Any) -> str:
+    for attr in ("model_name", "model", "model_id"):
+        if isinstance(name := getattr(model, attr, None), str):
+            return name
+    return getattr(model, "_llm_type", "") or type(model).__name__
+
+
 class StateContext(AgentMiddleware[Any, Any]):
     """Appends the latest robot state to every model request, never to the history.
 
     All sources are read concurrently before each model call, each under its own
     ``timeout_s``. A source that fails, times out or returns ``None`` keeps its
-    last good value.
+    last good value. With an ``agent``, each refresh is emitted as an
+    :class:`~rai.agents.events.Observation` (for recorders).
     """
 
-    def __init__(self, sources: Mapping[str, StateSource], timeout_s: float = 5.0):
+    def __init__(
+        self,
+        sources: Mapping[str, StateSource],
+        timeout_s: float = 5.0,
+        agent: BaseAgent | None = None,
+    ):
         super().__init__()
         self.sources = dict(sources)
         self.timeout_s = timeout_s
+        self.agent = agent
         self.last: dict[str, StateContent] = {}
 
-    async def _read(self, name: str, source: StateSource) -> None:
+    async def _read(self, name: str, source: StateSource) -> bool:
         try:
             async with asyncio.timeout(self.timeout_s):
                 value = await source()
@@ -169,13 +194,24 @@ class StateContext(AgentMiddleware[Any, Any]):
             logger.warning(
                 "State source %s failed, keeping its last value: %r", name, e
             )
-            return
+            return False
         if value is not None:
             self.last[name] = value
+        return value is not None
 
     async def observe(self) -> HumanMessage | None:
         """Refresh all sources and render them as one message."""
-        await asyncio.gather(*(self._read(n, s) for n, s in self.sources.items()))
+        names = list(self.sources)
+        fresh = await asyncio.gather(*(self._read(n, self.sources[n]) for n in names))
+        if self.agent is not None and self.last:
+            self.agent.emit(
+                Observation(
+                    agent=self.agent.name,
+                    turn=_TURN.get(),
+                    values=dict(self.last),
+                    fresh=tuple(n for n, f in zip(names, fresh) if f),
+                )
+            )
         blocks: list[str | dict[str, Any]] = []
         for name in self.sources:
             value = self.last.get(name)
@@ -384,6 +420,7 @@ class StateBasedAgent(ReActAgent):
     ):
         self.context = StateContext(state_sources, state_timeout_s)
         super().__init__(model, tools, middleware=[self.context, *middleware], **kwargs)
+        self.context.agent = self
         self.aggregators = [
             s for s in state_sources.values() if isinstance(s, Aggregator)
         ]
