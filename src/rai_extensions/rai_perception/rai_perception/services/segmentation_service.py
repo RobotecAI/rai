@@ -27,8 +27,8 @@ from pathlib import Path
 from typing import Optional
 
 import numpy as np
-from cv_bridge import CvBridge
 from rai.communication.ros2 import ROS2Connector
+from rai.communication.ros2.image_bridge import CvBridge
 
 from rai_interfaces.srv import RAIGroundedSam
 from rai_perception.models.segmentation import get_model

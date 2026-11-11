@@ -21,10 +21,11 @@ import rosidl_runtime_py.convert
 import rosidl_runtime_py.set_message
 import rosidl_runtime_py.utilities
 import sensor_msgs.msg
-from cv_bridge import CvBridge
 from rosidl_parser.definition import NamespacedType
 from rosidl_runtime_py.import_message import import_message_from_namespaced_type
 from rosidl_runtime_py.utilities import get_namespaced_type
+
+from rai.communication.ros2.image_bridge import CvBridge
 
 
 def ros2_message_to_dict(message: Any) -> OrderedDict[str, Any]:

@@ -18,7 +18,7 @@ from typing import List
 import cv2
 import numpy as np
 import rclpy
-from cv_bridge import CvBridge
+from rai.communication.ros2.image_bridge import CvBridge
 from rclpy.node import Node
 
 from rai_interfaces.srv import RAIGroundedSam, RAIGroundingDino

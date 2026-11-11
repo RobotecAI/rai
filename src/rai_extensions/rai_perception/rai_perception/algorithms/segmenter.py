@@ -24,8 +24,8 @@ from typing import List
 import hydra
 import numpy as np
 import torch
-from cv_bridge import CvBridge
 from rai.communication.ros2.api import convert_ros_img_to_ndarray
+from rai.communication.ros2.image_bridge import CvBridge
 from sam2.build_sam import build_sam2
 from sam2.sam2_image_predictor import SAM2ImagePredictor
 from sensor_msgs.msg import Image

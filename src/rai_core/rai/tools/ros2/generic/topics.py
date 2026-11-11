@@ -18,7 +18,6 @@ from typing import Any, Dict, List, Literal, Tuple, Type
 import rclpy.time
 import rosidl_runtime_py.set_message
 import rosidl_runtime_py.utilities
-from cv_bridge import CvBridge
 from langchain.tools import BaseTool
 from langchain_core.utils import stringify_dict
 from pydantic import BaseModel, Field
@@ -26,6 +25,7 @@ from sensor_msgs.msg import CompressedImage, Image
 
 from rai.communication.ros2 import ROS2Connector, ROS2Message
 from rai.communication.ros2.api.conversion import ros2_message_to_dict
+from rai.communication.ros2.image_bridge import CvBridge
 from rai.messages import MultimodalArtifact, preprocess_image
 from rai.tools.ros2.base import BaseROS2Tool, BaseROS2Toolkit
 from rai.tools.ros2.generic.interface_parser import render_interface_string

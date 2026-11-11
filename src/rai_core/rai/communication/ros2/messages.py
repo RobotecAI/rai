@@ -20,13 +20,13 @@ from uuid import uuid4
 
 import numpy as np
 import rosidl_runtime_py.convert
-from cv_bridge import CvBridge
 from PIL import Image
 from pydub import AudioSegment
 from sensor_msgs.msg import Image as ROS2Image
 
 from rai.communication.base_connector import BaseMessage
 from rai.communication.hri_connector import HRIMessage
+from rai.communication.ros2.image_bridge import CvBridge
 
 if importlib.util.find_spec("rai_interfaces") is None:
     logging.warning("rai_interfaces is not installed, ROS 2 HRIMessage will not work.")

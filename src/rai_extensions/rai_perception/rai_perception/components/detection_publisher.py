@@ -27,8 +27,8 @@ from typing import Dict, List, Optional, Tuple
 
 import rclpy
 import yaml
-from cv_bridge import CvBridge
 from rai.communication.ros2 import ROS2Connector, ROS2ServiceError
+from rai.communication.ros2.image_bridge import CvBridge
 from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import CameraInfo, Image

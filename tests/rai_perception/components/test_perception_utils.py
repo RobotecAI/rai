@@ -14,8 +14,8 @@
 
 import numpy as np
 import pytest
-from cv_bridge import CvBridge
 from geometry_msgs.msg import Point, Pose
+from rai.communication.ros2.image_bridge import CvBridge
 from rai_perception.components.perception_utils import (
     compute_3d_pose_from_bbox,
     convert_depth_to_meters,
