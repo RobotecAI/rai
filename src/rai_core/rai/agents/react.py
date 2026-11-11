@@ -118,6 +118,7 @@ class _AgentHooks(AgentMiddleware[Any, Any]):
                 effect=effect,
                 status=status,
                 content=result.content,
+                artifact=result.artifact,
             )
         )
 

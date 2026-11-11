@@ -72,6 +72,7 @@ class ToolEnd(TurnEvent):
     effect: "Effect"
     status: Literal["success", "error", "denied"]
     content: Any
+    artifact: Any = None  # e.g. {"images": [base64, ...]}
 
 
 @dataclass(frozen=True, kw_only=True)
