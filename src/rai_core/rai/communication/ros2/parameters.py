@@ -14,8 +14,9 @@
 
 from typing import Any
 
-import rclpy
-from rclpy.parameter import Parameter, ParameterType
+from rcl_interfaces.msg import ParameterType
+from rclpy.node import Node
+from rclpy.parameter import Parameter
 
 from .exceptions import ROS2ParameterError
 
@@ -24,7 +25,7 @@ from .exceptions import ROS2ParameterError
 # direct ROS2 parameter access is sufficient.
 
 
-def get_param_value(node: rclpy.node.Node, name: str, default: Any = None) -> Any:
+def get_param_value(node: Node, name: str, default: Any = None) -> Any:
     """Get parameter value from node with automatic type extraction.
 
     Args:
@@ -56,7 +57,7 @@ def get_param_value(node: rclpy.node.Node, name: str, default: Any = None) -> An
     return _extract_param_value(param)
 
 
-def _extract_param_value(param: Parameter) -> Any:
+def _extract_param_value(param: "Parameter[Any]") -> Any:
     """Extract Python value from ROS2 Parameter object."""
     param_value = param.get_parameter_value()
     # param.type_ is an enum (rclpy.parameter.Parameter.Type), get its integer value

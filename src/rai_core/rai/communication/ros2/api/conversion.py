@@ -19,8 +19,6 @@ from typing import Any, OrderedDict, Type
 import cv2
 import numpy as np
 import rosidl_runtime_py.convert
-import rosidl_runtime_py.set_message
-import rosidl_runtime_py.utilities
 import sensor_msgs.msg
 from rosidl_parser.definition import NamespacedType
 from rosidl_runtime_py.import_message import import_message_from_namespaced_type
@@ -41,10 +39,8 @@ def ros2_message_to_dict(message: Any) -> OrderedDict[str, Any]:
     Raises:
         TypeError: If the input is not a valid ROS2 message
     """
-    msg_dict: OrderedDict[str, Any] = rosidl_runtime_py.convert.message_to_ordereddict(
-        message
-    )  # type: ignore
-    return msg_dict
+    # rosidl_runtime_py is untyped
+    return rosidl_runtime_py.convert.message_to_ordereddict(message)  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
 
 
 @functools.cache
@@ -91,7 +87,7 @@ def convert_ros_img_to_base64(
     """Encode the image as a base64 PNG."""
     if isinstance(msg, sensor_msgs.msg.Image):
         bgr = imgmsg_to_numpy(msg, "bgr8")
-    elif isinstance(msg, sensor_msgs.msg.CompressedImage):
+    elif isinstance(msg, sensor_msgs.msg.CompressedImage):  # pyright: ignore[reportUnnecessaryIsInstance]  # untyped callers
         bgr = compressed_imgmsg_to_numpy(msg, "bgr8")
     else:
         raise ValueError(f"Unsupported message type: {type(msg)}")

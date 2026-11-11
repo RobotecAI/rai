@@ -15,7 +15,7 @@
 """sensor_msgs Image <-> numpy conversion, replacing cv_bridge."""
 
 import sys
-from typing import Optional
+from typing import Any, Optional
 
 import cv2
 import numpy as np
@@ -27,7 +27,7 @@ from rai import content
 from rai.content import ENCODINGS, convert_encoding
 
 
-def imgmsg_to_numpy(msg: Image, encoding: str = "passthrough") -> NDArray:
+def imgmsg_to_numpy(msg: Image, encoding: str = "passthrough") -> NDArray[Any]:
     """Return a copy of the image data as an (H, W) or (H, W, C) array."""
     if msg.encoding not in ENCODINGS:
         raise ValueError(f"Unsupported image encoding: {msg.encoding}")
@@ -43,7 +43,7 @@ def imgmsg_to_numpy(msg: Image, encoding: str = "passthrough") -> NDArray:
 
 
 def numpy_to_imgmsg(
-    image: NDArray, encoding: str, header: Optional[Header] = None
+    image: NDArray[Any], encoding: str, header: Optional[Header] = None
 ) -> Image:
     """Build an Image message from an (H, W) or (H, W, C) array in the given encoding."""
     if encoding not in ENCODINGS:
@@ -71,7 +71,7 @@ def numpy_to_imgmsg(
 
 def compressed_imgmsg_to_numpy(
     msg: CompressedImage, encoding: str = "passthrough"
-) -> NDArray:
+) -> NDArray[Any]:
     """Decode a CompressedImage. Color images decode as bgr8 or bgra8, like cv2."""
     buffer = np.frombuffer(bytes(msg.data), dtype=np.uint8)
     image = cv2.imdecode(buffer, cv2.IMREAD_UNCHANGED)
@@ -85,7 +85,7 @@ def compressed_imgmsg_to_numpy(
 
 
 def encode_image(
-    image: NDArray | Image | CompressedImage | content.Image,
+    image: NDArray[Any] | Image | CompressedImage | content.Image,
     *,
     max_side: int = 1024,
     format: str = "jpeg",

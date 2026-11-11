@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# The classes of this module use each other's private members.
+# pyright: reportPrivateUsage=false
+
 import logging
 from array import array
 from typing import Any, Callable, Optional, Union
@@ -57,7 +60,7 @@ def to_ros(message: HRIMessage) -> Any:
 
 
 def _parts(items: Any, convert: Callable[[Any], Any]) -> list[Any]:
-    out = []
+    out: list[Any] = []
     for item in items:
         try:
             out.append(convert(item))

@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import functools
 import time
-from typing import Callable, Dict, List, Optional, Tuple
+from types import TracebackType
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import rclpy.callback_groups
 import rclpy.node
@@ -90,7 +92,12 @@ class ROS2Context:
         except Exception as e:
             raise RuntimeError(f"Failed to initialize ROS 2: {e}") from e
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(
+        self,
+        exc_type: Optional[type[BaseException]],
+        exc_value: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> None:
         """Exit the context manager and cleanup ROS 2.
 
         Parameters
@@ -111,7 +118,7 @@ class ROS2Context:
                 logging.error(f"Error during ROS 2 shutdown: {e}")
         self._initialized = False
 
-    def __call__(self, func):
+    def __call__[**P, R](self, func: Callable[P, R]) -> Callable[P, R]:
         """Make the class callable as a decorator.
 
         Parameters
@@ -125,13 +132,11 @@ class ROS2Context:
             The wrapped function with ROS 2 context management
         """
 
-        def wrapper(*args, **kwargs):
+        @functools.wraps(func)
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             with self:
                 return func(*args, **kwargs)
 
-        # Preserve the original function's metadata
-        wrapper.__name__ = func.__name__
-        wrapper.__doc__ = func.__doc__
         return wrapper
 
     @property
@@ -152,7 +157,7 @@ class NodeDiscovery:
         node: rclpy.node.Node,
         allowlist: Optional[List[str]] = None,
         period_sec: float = 0.5,
-        setters: Optional[List[Callable]] = None,
+        setters: Optional[List[Callable[["NodeDiscovery"], Any]]] = None,
     ) -> None:
         self.period_sec = period_sec
         self.node = node
@@ -171,20 +176,19 @@ class NodeDiscovery:
         # callables (e.g. fun(x: NodeDiscovery)) that will receive the discovery
         # info on every timer callback. This allows to register other entities that
         # needs up-to-date discovery info
-        if setters is None:
-            self.setters = list()
-        else:
-            self.setters = setters
+        self.setters: List[Callable[[NodeDiscovery], Any]] = (
+            list() if setters is None else setters
+        )
 
         # make first callback as fast as possible
         # sleep before first callback due ros discovery issue: https://github.com/ros2/ros2/issues/1057
         time.sleep(0.5)
         self.discovery_callback()
 
-    def add_setter(self, setter: Callable):
+    def add_setter(self, setter: Callable[["NodeDiscovery"], Any]) -> None:
         self.setters.append(setter)
 
-    def discovery_callback(self):
+    def discovery_callback(self) -> None:
         self.__set(
             self.node.get_topic_names_and_types(),
             self.node.get_service_names_and_types(),
@@ -193,7 +197,12 @@ class NodeDiscovery:
         for setter in self.setters:
             setter(self)
 
-    def __set(self, topics, services, actions):
+    def __set(
+        self,
+        topics: List[Tuple[str, List[str]]],
+        services: List[Tuple[str, List[str]]],
+        actions: List[Tuple[str, List[str]]],
+    ) -> None:
         # Build each dict fully before assigning it: dict() may run concurrently.
         def to_dict(info: List[Tuple[str, List[str]]]) -> Dict[str, str]:
             return {
@@ -206,7 +215,7 @@ class NodeDiscovery:
         self.services_and_types = to_dict(services)
         self.actions_and_types = to_dict(actions)
 
-    def dict(self):
+    def dict(self) -> Dict[str, Dict[str, str]]:
         return {
             "topics_and_types": self.topics_and_types,
             "services_and_types": self.services_and_types,

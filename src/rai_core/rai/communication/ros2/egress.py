@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# The classes of this module use each other's private members.
+# pyright: reportPrivateUsage=false
+
 """Connector-side egress hooks: a fail-closed chain run by the runtime before
 every publish, service call, goal and goal cancel (rai3-plan/PLAN.md 2.3).
 
@@ -135,7 +138,7 @@ class _Entry:
     names: tuple[str, ...]
     kinds: frozenset[str]
     timeout_s: float
-    leases: dict[Key, float] = field(default_factory=dict)
+    leases: dict[Key, float] = field(default_factory=dict[Key, float])
 
     def matches(self, key: Key) -> bool:
         kind, name, type_ = key

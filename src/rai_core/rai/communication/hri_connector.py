@@ -28,8 +28,8 @@ class HRIMessage:
     """
 
     text: str = ""
-    images: list[Image] = field(default_factory=list)
-    audios: list[Audio] = field(default_factory=list)
+    images: list[Image] = field(default_factory=list[Image])
+    audios: list[Audio] = field(default_factory=list[Audio])
     communication_id: str = ""
     seq_no: int = 0
     seq_end: bool = False

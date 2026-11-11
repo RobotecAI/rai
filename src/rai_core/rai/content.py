@@ -28,7 +28,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 # Image encodings (ROS names) -> (dtype, channels)
-ENCODINGS: dict[str, tuple[type, int]] = {
+ENCODINGS: dict[str, tuple[type[np.generic], int]] = {
     "rgb8": (np.uint8, 3),
     "bgr8": (np.uint8, 3),
     "rgba8": (np.uint8, 4),
@@ -104,7 +104,14 @@ class Image:
         image = self.data
         if image.dtype != np.uint8:  # depth: show the range that is there
             finite = np.nan_to_num(image.astype(np.float32), posinf=0.0, neginf=0.0)
-            image = cv2.normalize(finite, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
+            image = cv2.normalize(  # pyright: ignore[reportCallIssue]
+                finite,
+                None,  # pyright: ignore[reportArgumentType]  # allocates dst; the stubs require a Mat
+                0,
+                255,
+                cv2.NORM_MINMAX,
+                cv2.CV_8U,
+            )
         elif image.ndim == 3:
             src = _CANONICAL.get(self.encoding, self.encoding)
             image = convert_encoding(image, src, "bgra8" if src[-2] == "a" else "bgr8")

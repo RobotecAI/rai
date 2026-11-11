@@ -19,11 +19,14 @@ view for free. A view aliases the message: copy it to keep it past the message
 or to change it without changing the message.
 """
 
+from typing import Any
+
 import numpy as np
 from numpy.typing import NDArray
 from sensor_msgs.msg import CompressedImage, Image, PointCloud2, PointField
 
-from rai.communication.ros2.images import ENCODINGS, compressed_imgmsg_to_numpy
+from rai.communication.ros2.images import compressed_imgmsg_to_numpy
+from rai.content import ENCODINGS
 
 _POINT_TYPES = {
     PointField.INT8: "i1",
@@ -37,7 +40,7 @@ _POINT_TYPES = {
 }
 
 
-def image(msg: Image | CompressedImage) -> NDArray:
+def image(msg: Image | CompressedImage) -> NDArray[Any]:
     """(H, W) or (H, W, C) view of an Image in its own encoding and channel order.
     A CompressedImage is decoded (bgr8 for color), which copies."""
     if isinstance(msg, CompressedImage):
@@ -53,7 +56,7 @@ def image(msg: Image | CompressedImage) -> NDArray:
     return pixels.reshape(msg.height, msg.width, channels)
 
 
-def points(msg: PointCloud2) -> NDArray:
+def points(msg: PointCloud2) -> NDArray[Any]:
     """Structured view of a PointCloud2, one record per point with the message's
     fields (e.g. view["x"]); shape (width,) or (height, width)."""
     order = ">" if msg.is_bigendian else "<"

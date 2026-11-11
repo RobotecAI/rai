@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# The classes of this module use each other's private members.
+# pyright: reportPrivateUsage=false
+
 """The ROS 2 connector: an async API usable from any event loop, its blocking
 twin ``connector.sync``, and the typed Subscription and GoalHandle objects.
 
@@ -32,7 +35,10 @@ import rclpy.action
 from action_msgs.srv import CancelGoal
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from rclpy.time import Time
-from tf2_ros import LookupException, TransformStamped
+from tf2_ros import (  # pyright: ignore[reportMissingTypeStubs]
+    LookupException,  # pyright: ignore[reportAttributeAccessIssue, reportUnknownVariableType]  # from the tf2_py C extension
+    TransformStamped,
+)
 from unique_identifier_msgs.msg import UUID
 
 from rai.communication.exceptions import ConnectorClosedError
@@ -75,7 +81,7 @@ class QoS:
 
 def _companion(obj: Any, suffix: str) -> Any:
     """The service or action class of a Foo_Request or Foo_Goal instance."""
-    cls = type(obj)
+    cls = obj.__class__
     package = sys.modules[cls.__module__.rsplit(".", 1)[0]]
     return getattr(package, cls.__name__.removesuffix(suffix))
 
@@ -102,7 +108,7 @@ class Subscription:
         name: str,
         callback: Optional[Callable[[Any], Any]],
         maxsize: Optional[int],
-        on_close: Callable[[], None] = lambda: None,
+        on_close: Callable[[], object] = lambda: None,
         replay: bool = False,
         decode: Callable[[Any], Any] = lambda msg: msg,
     ) -> None:
@@ -266,19 +272,21 @@ class GoalHandle:
 
     def feedback(self) -> list[Any]:
         """Feedback received since the last call (the newest 100)."""
-        items = []
+        items: list[Any] = []
         while self._feedback:
             items.append(self._feedback.popleft())
         return items
 
     async def result(self, timeout: Optional[float] = None) -> Any:
         """The action's Result message, once the goal is done."""
+        waiter = None
         with self._lock:
             response = self._response
             if response is None:
                 waiter = Waiter()
                 self._pending.add(waiter)
         if response is None:
+            assert waiter is not None  # created under the lock
             what = f"result of the goal on {self.action}"
             response = await self._runtime.wait(
                 waiter, timeout, what, self._pending, *self._groups

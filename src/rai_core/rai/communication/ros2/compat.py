@@ -21,7 +21,7 @@ uses ``call_async``), ``rclpy.init`` return values, and the blocking
 """
 
 import copy
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 import rosidl_runtime_py.set_message
 from geometry_msgs.msg import PoseArray
@@ -36,7 +36,9 @@ from rclpy.subscription import Subscription
 try:
     from rclpy.endpoint_info import TopicEndpointInfo  # Lyrical
 except ImportError:
-    from rclpy.topic_endpoint_info import TopicEndpointInfo  # Jazzy
+    from rclpy.topic_endpoint_info import (  # pyright: ignore[reportMissingImports]  # Jazzy
+        TopicEndpointInfo,  # pyright: ignore[reportUnknownVariableType]
+    )
 
 try:
     from rclpy.experimental import EventsExecutor  # Jazzy >= 7.1.11, Lyrical
@@ -76,18 +78,18 @@ def destroy(node: Node, entity: Any) -> None:
     and servers remove themselves. Lyrical's rclpy.shutdown() already destroyed
     every node, so destroying twice must be harmless.
     """
-    destroyers = {
-        Publisher: node.destroy_publisher,
-        Subscription: node.destroy_subscription,
-        Client: node.destroy_client,
-        Service: node.destroy_service,
-    }
     try:
-        for kind, destroyer in destroyers.items():
-            if isinstance(entity, kind):
-                destroyer(entity)
-                return
-        entity.destroy()
+        # Quoted: these classes are generic on Lyrical only.
+        if isinstance(entity, Publisher):
+            node.destroy_publisher(cast("Publisher[Any]", entity))
+        elif isinstance(entity, Subscription):
+            node.destroy_subscription(cast("Subscription[Any]", entity))
+        elif isinstance(entity, Client):
+            node.destroy_client(cast("Client[Any, Any]", entity))
+        elif isinstance(entity, Service):
+            node.destroy_service(cast("Service[Any, Any]", entity))
+        else:
+            entity.destroy()
     except Exception:  # an invalid handle after rclpy.shutdown()
         pass
 
@@ -160,7 +162,7 @@ def entity_topics(name: str, kind: str) -> list[tuple[str, bool]]:
         return [(f"rt{name}", kind == "publisher")]
     if kind == "client":
         return [(f"rq{name}Request", True), (f"rr{name}Reply", False)]
-    topics = []
+    topics: list[tuple[str, bool]] = []
     for service in ("send_goal", "cancel_goal", "get_result"):
         base = f"{name}/_action/{service}"
         topics += [(f"rq{base}Request", True), (f"rr{base}Reply", False)]
@@ -171,7 +173,7 @@ def own_endpoints(node: Node, topics: list[tuple[str, bool]]) -> list[Any]:
     """node's own endpoints on DDS topics (name, is_publisher). The graph drops
     an endpoint when the RMW really destroys it, not when rclpy defers that."""
     me = (node.get_name(), node.get_namespace())
-    found = []
+    found: list[Any] = []
     for topic, publisher in topics:
         get = (
             node.get_publishers_info_by_topic
@@ -190,7 +192,12 @@ def cancel_goal_id(action_client: Any, goal_id: Any) -> None:
     """Send a cancel request for goal_id without waiting for the answer, also
     when its goal response never arrived (rclpy's public cancel needs the
     handle from that response). Same private API on Jazzy and Lyrical."""
-    action_client._cancel_goal_async(ClientGoalHandle(action_client, goal_id, None))
+    handle = ClientGoalHandle(
+        action_client,
+        goal_id,
+        None,  # pyright: ignore[reportArgumentType]  # only the id is read
+    )
+    action_client._cancel_goal_async(handle)
 
 
 __all__ = [

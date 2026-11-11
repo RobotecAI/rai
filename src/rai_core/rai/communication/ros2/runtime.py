@@ -40,7 +40,7 @@ import time
 import uuid
 import weakref
 from collections import deque
-from typing import Any, Callable, Iterable, Literal, Optional
+from typing import Any, Callable, Iterable, Literal, Optional, cast
 
 import rclpy
 from rclpy.action import ActionClient, ActionServer, CancelResponse, GoalResponse
@@ -146,10 +146,10 @@ class Waiter:
             else:
                 self.future.set_exception(error)
 
-    def bind(self, future: Future) -> "Waiter":
+    def bind(self, future: "Future[Any]") -> "Waiter":
         """Complete with the result of an rclpy future."""
 
-        def done(f: Future) -> None:
+        def done(f: "Future[Any]") -> None:
             try:
                 self.resolve(f.result())
             except BaseException as e:
@@ -349,8 +349,11 @@ class ROS2Runtime:
 
     def _spin(self) -> None:
         while not self._closed and self.context.ok():
+            executor = self.executor
+            if executor is None:
+                return
             try:
-                self.executor.spin()
+                executor.spin()
                 return
             except ExternalShutdownException:
                 return
@@ -372,7 +375,8 @@ class ROS2Runtime:
         for client in self._clients.values():
             fail(client.pending, closed)
         self.workers.shutdown(wait=False, cancel_futures=True)
-        self.executor.shutdown(timeout_sec=0)
+        if self.executor is not None:
+            self.executor.shutdown(timeout_sec=0)
         if threading.current_thread() is not self._spin_thread:
             self._spin_thread.join(1.0)
         if not self._spin_thread.is_alive():
@@ -468,16 +472,16 @@ class ROS2Runtime:
             for group in (self._pending, *groups):
                 group.discard(waiter)
 
-    def call_in_worker(self, fn: Callable[..., Any], *args: Any) -> Future:
+    def call_in_worker(self, fn: Callable[..., Any], *args: Any) -> "Future[Any]":
         """Run fn on the worker pool; the returned rclpy future is awaitable from
         executor callbacks (async rclpy callbacks never block the executor)."""
-        done: Future = Future()
+        done: Future[Any] = Future()
 
         def job() -> None:
             try:
                 done.set_result(fn(*args))
             except BaseException as e:
-                done.set_exception(e)
+                done.set_exception(e)  # pyright: ignore[reportArgumentType]  # rclpy keeps any exception
 
         self.workers.submit(job)
         return done
@@ -521,7 +525,8 @@ class ROS2Runtime:
             topic = self._topics[key]
             if topic.consumers or topic.pending:
                 raise TypeError(
-                    f"{name} is subscribed as {topic.msg_type.__name__}, not {cls.__name__}"
+                    f"{name} is subscribed as {topic.msg_type.__name__}, "
+                    f"not {cast(type[Any], cls).__name__}"
                 )
         for key in stale:
             compat.destroy(self.node, self._topics.pop(key).subscription)
@@ -555,7 +560,11 @@ class ROS2Runtime:
     ) -> Any:
         events = SubscriptionEventCallbacks()
         if rematch:
-            events.matched = lambda _: self._rematch(topic, key, qos)
+
+            def matched(_: Any) -> None:
+                self._rematch(topic, key, qos)
+
+            events.matched = matched
         return self.node.create_subscription(
             topic.msg_type,
             key[0],
@@ -609,7 +618,7 @@ class ROS2Runtime:
         """Publish from async code; raises EgressDenied if a hook refuses."""
         self.check()
         topic = self.resolve(name)
-        if global_egress._entries or self.egress._entries:
+        if global_egress or self.egress:  # any hooks (EgressHooks.__len__)
             await self.agate("publish", topic, type(msg), msg)
         self._publish(topic, msg, qos)
 
@@ -656,7 +665,7 @@ class ROS2Runtime:
 
     async def agate(self, kind: str, name: str, cls: Any, payload: Any) -> None:
         """Run the egress hooks on the caller's loop. Raises EgressDenied."""
-        if not (global_egress._entries or self.egress._entries):
+        if not (global_egress or self.egress):
             return
         check = self._egress(kind, name, cls, payload)
         if check is not None:
@@ -815,7 +824,7 @@ class ROS2Runtime:
         resolved = (self.resolve(name, "service"),)
 
         async def callback(request: Any, response: Any) -> Any:
-            done: Future = Future()
+            done: Future[Any] = Future()
 
             def job() -> None:
                 try:
@@ -866,7 +875,10 @@ class ROS2Runtime:
         ):
             if key in kwargs:
                 kwargs[key] = guard(kwargs[key], refuse)
-        decide = kwargs.get("goal_callback", lambda _: GoalResponse.ACCEPT)
+        decide: Callable[[Any], Any] = kwargs.get(
+            "goal_callback",
+            lambda _: GoalResponse.ACCEPT,  # pyright: ignore[reportUnknownLambdaType]
+        )
         services = tuple(
             f"{self.resolve(name)}/_action/{service}"
             for service in ("send_goal", "get_result", "cancel_goal")
@@ -923,7 +935,7 @@ class ROS2Runtime:
 
     def cancel_goals(
         self, types: Optional[Iterable[str]] = None, timeout: float = 2.0
-    ) -> list[concurrent.futures.Future]:
+    ) -> list[concurrent.futures.Future[bool]]:
         """Request the cancel of every active goal (of types) without waiting.
 
         Callable from any thread, async code and callbacks included. Each
@@ -946,7 +958,10 @@ class ROS2Runtime:
         with self._lock:
             self.check()
             if self._tf_buffer is None:
-                from tf2_ros import Buffer, TransformListener
+                from tf2_ros import (  # pyright: ignore[reportMissingTypeStubs]
+                    Buffer,
+                    TransformListener,
+                )
 
                 self._tf_buffer = Buffer(node=self.node)
                 self._tf_listener = TransformListener(self._tf_buffer, self.node)
