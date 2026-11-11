@@ -12,25 +12,79 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-from typing import Literal, Type
+"""Manipulation tools on the rai_interfaces ManipulatorMoveTo service."""
 
-import numpy as np
+import asyncio
+import contextlib
+from typing import Any, Literal, Type
+
 from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 from tf2_geometry_msgs import do_transform_pose
 from typing_extensions import deprecated
 
-from rai.communication.ros2.ros_async import get_future_result
+from rai.tools.hooks import Effect
 from rai.tools.ros2.base import BaseROS2Tool
 
-try:
-    from rai_interfaces.srv import ManipulatorMoveTo
-except ImportError:
-    logging.warning(
-        "rai_interfaces is not installed, ManipulatorMoveTo tool will not work."
+GRIPPER_DOWN = Quaternion(x=0.9238795325112867, y=-0.3826834323650898, z=0.0, w=0.0)
+
+
+class ManipulatorTool(BaseROS2Tool):
+    """Moves the end effector with the ManipulatorMoveTo service."""
+
+    default_effect = Effect.ACTUATE
+    target_fields = {"service": "service"}
+
+    manipulator_frame: str = Field(..., description="Manipulator frame")
+    service: str = Field(
+        default="/manipulator_move_to", description="The ManipulatorMoveTo service"
     )
+    timeout_sec: float = Field(
+        default=20.0, description="Timeout for service calls in seconds"
+    )
+    quaternion: Quaternion = Field(
+        default=GRIPPER_DOWN, description="Constant end effector orientation"
+    )
+
+    async def move(self, x: float, y: float, z: float, grab: bool) -> bool:
+        """Move to (x, y, z). grab: open the gripper before and close it after
+        the move; otherwise close before and open after. True on success."""
+        from rai_interfaces.srv import ManipulatorMoveTo
+
+        request = ManipulatorMoveTo.Request()
+        request.target_pose = PoseStamped()
+        request.target_pose.header.frame_id = self.manipulator_frame
+        request.target_pose.pose = Pose(
+            position=Point(x=float(x), y=float(y), z=float(z)),
+            orientation=self.quaternion,
+        )
+        request.initial_gripper_state = grab  # True: open
+        request.final_gripper_state = not grab
+        response = await self.connector.call(
+            self.service, request, timeout=self.timeout_sec
+        )
+        return response.success
+
+
+class CalibratedManipulatorTool(ManipulatorTool):
+    min_z: float = Field(default=0.135, description="Minimum z coordinate [m]")
+    calibration_x: float = Field(default=0.0, description="Calibration x [m]")
+    calibration_y: float = Field(default=0.0, description="Calibration y [m]")
+    calibration_z: float = Field(default=0.0, description="Calibration z [m]")
+    additional_height: float = Field(
+        default=0.05, description="Additional height for the place task [m]"
+    )
+
+    async def move_calibrated(
+        self, x: float, y: float, z: float, grab: bool, lift: float = 0.0
+    ) -> bool:
+        return await self.move(
+            x + self.calibration_x,
+            y + self.calibration_y,
+            max(z + lift + self.calibration_z, self.min_z),
+            grab,
+        )
 
 
 class MoveToPointToolInput(BaseModel):
@@ -43,7 +97,7 @@ class MoveToPointToolInput(BaseModel):
     )
 
 
-class MoveToPointTool(BaseROS2Tool):
+class MoveToPointTool(CalibratedManipulatorTool):
     name: str = "move_to_point"
     description: str = (
         "Guide the robot's end effector to a specific point within the manipulator's operational space. "
@@ -51,100 +105,15 @@ class MoveToPointTool(BaseROS2Tool):
         "While it confirms successful positioning, please note that it doesn't provide feedback on the "
         "success of grabbing or releasing objects. Use additional sensors or tools for that information."
     )
-
-    manipulator_frame: str = Field(..., description="Manipulator frame")
-    min_z: float = Field(default=0.135, description="Minimum z coordinate [m]")
-    calibration_x: float = Field(default=0.0, description="Calibration x [m]")
-    calibration_y: float = Field(default=0.0, description="Calibration y [m]")
-    calibration_z: float = Field(default=0.0, description="Calibration z [m]")
-    additional_height: float = Field(
-        default=0.05, description="Additional height for the place task [m]"
-    )
-    timeout_sec: float = Field(
-        default=20.0, description="Timeout for service calls in seconds"
-    )
-    service_availability_timeout_sec: float = Field(
-        default=5.0,
-        description="Timeout for waiting for service to become available in seconds",
-    )
-
-    # constant quaternion
-    quaternion: Quaternion = Field(
-        default=Quaternion(x=0.9238795325112867, y=-0.3826834323650898, z=0.0, w=0.0),
-        description="Constant quaternion",
-    )
-
     args_schema: Type[MoveToPointToolInput] = MoveToPointToolInput
 
-    def _run(
-        self,
-        x: float,
-        y: float,
-        z: float,
-        task: Literal["grab", "drop"],
+    async def _acall(
+        self, x: float, y: float, z: float, task: Literal["grab", "drop"]
     ) -> str:
-        client = self.connector._node.create_client(
-            ManipulatorMoveTo,
-            "/manipulator_move_to",
-        )
-
-        # Wait for service to be available
-        if not client.wait_for_service(
-            timeout_sec=self.service_availability_timeout_sec
-        ):
-            available_services = [
-                s[0] for s in self.connector.get_services_names_and_types()
-            ]
-            return (
-                f"Service '/manipulator_move_to' is not available. "
-                f"Available services: {sorted(available_services)[:10]}. "
-                f"Please ensure the manipulator service is running."
-            )
-
-        pose_stamped = PoseStamped()
-        pose_stamped.header.frame_id = self.manipulator_frame
-        pose_stamped.pose = Pose(
-            position=Point(x=x, y=y, z=z),
-            orientation=self.quaternion,
-        )
-
-        if task == "drop":
-            pose_stamped.pose.position.z += self.additional_height
-
-        pose_stamped.pose.position.x += self.calibration_x
-        pose_stamped.pose.position.y += self.calibration_y
-        pose_stamped.pose.position.z += self.calibration_z
-
-        pose_stamped.pose.position.z = np.max(
-            [pose_stamped.pose.position.z, self.min_z]
-        )
-
-        request = ManipulatorMoveTo.Request()
-        request.target_pose = pose_stamped
-
-        if task == "grab":
-            request.initial_gripper_state = True  # open
-            request.final_gripper_state = False  # closed
-        else:
-            request.initial_gripper_state = False  # closed
-            request.final_gripper_state = True  # open
-
-        future = client.call_async(request)
-        self.connector._node.get_logger().debug(
-            f"Calling ManipulatorMoveTo service with request: x={request.target_pose.pose.position.x:.2f}, y={request.target_pose.pose.position.y:.2f}, z={request.target_pose.pose.position.z:.2f}"
-        )
-        response = get_future_result(future, timeout_sec=self.timeout_sec)
-        if response is None:
-            return (
-                f"Service call to '/manipulator_move_to' timed out after {self.timeout_sec}s "
-                f"for point ({x:.2f}, {y:.2f}, {z:.2f}). "
-                f"The service may be unresponsive or the operation is taking longer than expected."
-            )
-
-        if response.success:
+        lift = self.additional_height if task == "drop" else 0.0
+        if await self.move_calibrated(x, y, z, grab=task == "grab", lift=lift):
             return f"End effector successfully positioned at coordinates ({x:.2f}, {y:.2f}, {z:.2f}). Note: The status of object interaction (grab/drop) is not confirmed by this movement."
-        else:
-            return f"Failed to position end effector at coordinates ({x:.2f}, {y:.2f}, {z:.2f})."
+        return f"Failed to position end effector at coordinates ({x:.2f}, {y:.2f}, {z:.2f})."
 
 
 class MoveObjectFromToToolInput(BaseModel):
@@ -168,154 +137,51 @@ class MoveObjectFromToToolInput(BaseModel):
     )
 
 
-class MoveObjectFromToTool(BaseROS2Tool):
+class MoveObjectFromToTool(CalibratedManipulatorTool):
+    """Pick at (x, y, z), place at (x1, y1, z1), then reset the arm, also when
+    the place move fails."""
+
     name: str = "move_object_from_to"
     description: str = (
         "Move an object from one point to another. "
         "The tool will grab the object from the first point and then release it at the second point. "
         "The tool will not confirm the success of grabbing or releasing objects. Use additional sensors (e.g. camera) or tools for that information."
     )
-
-    manipulator_frame: str = Field(..., description="Manipulator frame")
-    min_z: float = Field(default=0.135, description="Minimum z coordinate [m]")
-    calibration_x: float = Field(default=0.0, description="Calibration x [m]")
-    calibration_y: float = Field(default=0.0, description="Calibration y [m]")
     calibration_z: float = Field(default=0.1, description="Calibration z [m]")
-    additional_height: float = Field(
-        default=0.05, description="Additional height for the place task [m]"
-    )
-    timeout_sec: float = Field(
-        default=20.0, description="Timeout for service calls in seconds"
-    )
-    service_availability_timeout_sec: float = Field(
-        default=5.0,
-        description="Timeout for waiting for service to become available in seconds",
-    )
-
-    # constant quaternion
-    quaternion: Quaternion = Field(
-        default=Quaternion(x=0.9238795325112867, y=-0.3826834323650898, z=0.0, w=0.0),
-        description="Constant quaternion",
-    )
-
     args_schema: Type[MoveObjectFromToToolInput] = MoveObjectFromToToolInput
 
-    def _run(
-        self,
-        x: float,
-        y: float,
-        z: float,
-        x1: float,
-        y1: float,
-        z1: float,
+    async def _acall(
+        self, x: float, y: float, z: float, x1: float, y1: float, z1: float
     ) -> str:
-        # Used to reset arm after tool call
-        reset_tool = ResetArmTool(
-            connector=self.connector, manipulator_frame=self.manipulator_frame
-        )
-
-        # NOTE: create_client could be refactored into self.connector.service_call
-        client = self.connector._node.create_client(
-            ManipulatorMoveTo,
-            "/manipulator_move_to",
-        )
-
-        # Wait for service to be available
-        if not client.wait_for_service(
-            timeout_sec=self.service_availability_timeout_sec
-        ):
-            available_services = [
-                s[0] for s in self.connector.get_services_names_and_types()
-            ]
-            return (
-                f"Service '/manipulator_move_to' is not available. "
-                f"Available services: {sorted(available_services)[:10]}. "
-                f"Please ensure the manipulator service is running."
-            )
-
-        pose_stamped = PoseStamped()
-        pose_stamped.header.frame_id = self.manipulator_frame
-        pose_stamped.pose = Pose(
-            position=Point(x=x, y=y, z=z),
-            orientation=self.quaternion,
-        )
-
-        pose_stamped1 = PoseStamped()
-        pose_stamped1.header.frame_id = self.manipulator_frame
-        pose_stamped1.pose = Pose(
-            position=Point(x=x1, y=y1, z=z1),
-            orientation=self.quaternion,
-        )
-
-        pose_stamped.pose.position.x += self.calibration_x
-        pose_stamped.pose.position.y += self.calibration_y
-        pose_stamped.pose.position.z += self.calibration_z
-
-        pose_stamped.pose.position.z = np.max(
-            [pose_stamped.pose.position.z, self.min_z]
-        )
-
-        pose_stamped1.pose.position.x += self.calibration_x
-        pose_stamped1.pose.position.y += self.calibration_y
-        pose_stamped1.pose.position.z += self.calibration_z
-
-        pose_stamped1.pose.position.z = np.max(
-            [pose_stamped1.pose.position.z, self.min_z]
-        )
-
-        request = ManipulatorMoveTo.Request()
-        request.target_pose = pose_stamped
-
-        request.initial_gripper_state = True  # open
-        request.final_gripper_state = False  # closed
-
-        future = client.call_async(request)
-        self.connector._node.get_logger().debug(
-            f"Calling ManipulatorMoveTo service with request: x={request.target_pose.pose.position.x:.2f}, y={request.target_pose.pose.position.y:.2f}, z={request.target_pose.pose.position.z:.2f}"
-        )
-        response = get_future_result(future, timeout_sec=self.timeout_sec)
-
-        if response is None:
-            return (
-                f"Service call to '/manipulator_move_to' timed out after {self.timeout_sec}s "
-                f"for point ({x:.2f}, {y:.2f}, {z:.2f}). "
-                f"The service may be unresponsive or the operation is taking longer than expected."
-            )
-
-        if response.success:
-            self.connector.logger.info(
-                f"End effector successfully positioned at coordinates ({x:.2f}, {y:.2f}, {z:.2f})."
-            )
-        else:
-            self.connector.logger.error(
-                f"Failed to position end effector at coordinates ({x:.2f}, {y:.2f}, {z:.2f})."
-            )
+        if not await self.move_calibrated(x, y, z, grab=True):
             return f"Failed to position end effector at coordinates ({x:.2f}, {y:.2f}, {z:.2f})."
-
-        request = ManipulatorMoveTo.Request()
-        request.target_pose = pose_stamped1
-
-        request.initial_gripper_state = False  # closed
-        request.final_gripper_state = True  # open
-
-        future = client.call_async(request)
-        self.connector._node.get_logger().debug(
-            f"Calling ManipulatorMoveTo service with request: x={request.target_pose.pose.position.x:.2f}, y={request.target_pose.pose.position.y:.2f}, z={request.target_pose.pose.position.z:.2f}"
-        )
-
-        response = get_future_result(future, timeout_sec=self.timeout_sec)
-
-        if response is None:
-            return (
-                f"Service call to '/manipulator_move_to' timed out after {self.timeout_sec}s "
-                f"for point ({x1:.2f}, {y1:.2f}, {z1:.2f}). "
-                f"The service may be unresponsive or the operation is taking longer than expected."
-            )
-        reset_tool._run()
-        if response.success:
+        try:
+            placed = await self.move_calibrated(x1, y1, z1, grab=False)
+        finally:
+            with contextlib.suppress(Exception):
+                await asyncio.shield(self.reset())
+        if placed:
             return f"End effector successfully positioned at coordinates ({x1:.2f}, {y1:.2f}, {z1:.2f}). Note: The status of object interaction (grab/drop) is not confirmed by this movement."
-        else:
-            return f"Failed to position end effector at coordinates ({x1:.2f}, {y1:.2f}, {z1:.2f})."
+        return f"Failed to position end effector at coordinates ({x1:.2f}, {y1:.2f}, {z1:.2f})."
+
+    async def reset(self) -> bool:
+        return await self.move(*RESET_POSITION, grab=True)
+
+
+RESET_POSITION = (0.31, 0.0, 0.59)
+
+
+class ResetArmTool(ManipulatorTool):
+    name: str = "reset_arm"
+    description: str = "Reset the arm to the initial position. Use when the arm is stuck or when arm obstructs the objects."
+    timeout_sec: float = Field(
+        default=5.0, description="Timeout for service calls in seconds"
+    )
+
+    async def _acall(self) -> str:
+        if await self.move(*RESET_POSITION, grab=True):
+            return "Arm successfully reset."
+        return "Failed to reset the arm."
 
 
 class GetObjectPositionsToolInput(BaseModel):
@@ -326,6 +192,7 @@ class GetObjectPositionsToolInput(BaseModel):
 
 @deprecated("Use GetObjectGrippingPointsTool from rai_perception instead")
 class GetObjectPositionsTool(BaseROS2Tool):
+    default_effect = Effect.READ
     name: str = "get_object_positions"
     description: str = (
         "Retrieve the positions of all objects of a specified type in the target frame. "
@@ -343,96 +210,31 @@ class GetObjectPositionsTool(BaseROS2Tool):
     args_schema: Type[GetObjectPositionsToolInput] = GetObjectPositionsToolInput
 
     @staticmethod
-    def format_pose(pose: Pose):
+    def format_pose(pose: Pose) -> str:
         return f"Centroid(x={pose.position.x:.2f}, y={pose.position.y:.2f}, z={pose.position.z:.2f})"
 
-    def _run(self, object_name: str):
-        transform = self.connector.get_transform(
-            target_frame=self.target_frame, source_frame=self.source_frame
-        )
-
-        results = self.get_grabbing_point_tool._run(
+    async def _acall(self, object_name: str) -> str:
+        transform = await self.connector.transform(self.target_frame, self.source_frame)
+        results: Any = await asyncio.to_thread(
+            self.get_grabbing_point_tool._run,
             camera_topic=self.camera_topic,
             depth_topic=self.depth_topic,
             camera_info_topic=self.camera_info_topic,
             object_name=object_name,
         )
-
-        poses = []
-        for result in results:
-            cam_pose = result[0]
-            poses.append(
-                Pose(position=Point(x=cam_pose[0], y=cam_pose[1], z=cam_pose[2]))
+        poses = [
+            do_transform_pose(
+                Pose(position=Point(x=float(p[0]), y=float(p[1]), z=float(p[2]))),
+                transform,
             )
-
-        mani_frame_poses = []
-        for pose in poses:
-            mani_frame_pose = do_transform_pose(pose, transform)
-            mani_frame_poses.append(mani_frame_pose)
-
-        # Sort by rounded position for a stable, deterministic ordering across runs.
-        mani_frame_poses.sort(
-            key=lambda p: (
-                round(p.position.x, 2),
-                round(p.position.y, 2),
-                round(p.position.z, 2),
-            )
-        )
-
-        if len(mani_frame_poses) == 0:
+            for p, *_ in results
+        ]
+        if not poses:
             return f"No {object_name}s detected."
-        else:
-            return f"Centroids of detected {object_name}s in {self.target_frame} frame: [{', '.join(map(self.format_pose, mani_frame_poses))}]. Sizes of the detected objects are unknown."
-
-
-class ResetArmToolInput(BaseModel):
-    pass
-
-
-class ResetArmTool(BaseROS2Tool):
-    name: str = "reset_arm"
-    description: str = "Reset the arm to the initial position. Use when the arm is stuck or when arm obstructs the objects."
-
-    args_schema: Type[ResetArmToolInput] = ResetArmToolInput
-
-    # constant quaternion
-    quaternion: Quaternion = Field(
-        default=Quaternion(x=0.9238795325112867, y=-0.3826834323650898, z=0.0, w=0.0),
-        description="Constant quaternion",
-    )
-    manipulator_frame: str = Field(..., description="Manipulator frame")
-
-    def _run(self):
-        client = self.connector._node.create_client(
-            ManipulatorMoveTo,
-            "/manipulator_move_to",
+        # Sort by rounded position for a stable, deterministic ordering across runs.
+        poses.sort(
+            key=lambda p: tuple(
+                round(v, 2) for v in (p.position.x, p.position.y, p.position.z)
+            )
         )
-
-        x = 0.31
-        y = 0.0
-        z = 0.59
-
-        request = ManipulatorMoveTo.Request()
-        request.target_pose = PoseStamped()
-        request.target_pose.header.frame_id = self.manipulator_frame
-        request.target_pose.pose = Pose(
-            position=Point(x=x, y=y, z=z),
-            orientation=self.quaternion,
-        )
-
-        request.initial_gripper_state = True  # open
-        request.final_gripper_state = False  # closed
-
-        future = client.call_async(request)
-        self.connector._node.get_logger().debug(
-            f"Calling ManipulatorMoveTo service with request: x={request.target_pose.pose.position.x:.2f}, y={request.target_pose.pose.position.y:.2f}, z={request.target_pose.pose.position.z:.2f}"
-        )
-        response = get_future_result(future, timeout_sec=5.0)
-
-        if response is None:
-            return "Failed to reset the arm."
-
-        if response.success:
-            return "Arm successfully reset."
-        else:
-            return "Failed to reset the arm."
+        return f"Centroids of detected {object_name}s in {self.target_frame} frame: [{', '.join(map(self.format_pose, poses))}]. Sizes of the detected objects are unknown."

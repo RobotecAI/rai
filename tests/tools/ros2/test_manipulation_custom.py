@@ -12,7 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import MagicMock, patch
+"""Manipulation tools against a real ManipulatorMoveTo service."""
+
+import time
+import uuid
+from typing import Any, List
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -26,8 +31,9 @@ try:
 except ImportError:
     pytest.skip("rai_interfaces is not installed", allow_module_level=True)
 
+from geometry_msgs.msg import TransformStamped
+from langchain_core.tools import BaseTool, ToolException
 from rai.communication.ros2.connectors import ROS2Connector
-from rai.tools.ros2.manipulation import custom
 from rai.tools.ros2.manipulation.custom import (
     GetObjectPositionsTool,
     MoveObjectFromToTool,
@@ -35,388 +41,172 @@ from rai.tools.ros2.manipulation.custom import (
     ResetArmTool,
 )
 
+from tests.communication.ros2.helpers import ros_setup
 
-@pytest.fixture
-def mock_connector():
-    """Create a mock ROS2Connector for testing."""
-    connector = MagicMock(spec=ROS2Connector)
-    connector._node = MagicMock()
-    connector._node.create_client = MagicMock()
-    connector._node.get_logger.return_value = MagicMock()
-    connector.logger = MagicMock()
-    connector.get_services_names_and_types.return_value = [
-        ("/service1", ["type1"]),
-        ("/service2", ["type2"]),
-    ]
-    return connector
+_ = ros_setup  # Explicitly use the fixture to prevent pytest warnings
 
 
-@pytest.fixture
-def mock_service_client():
-    """Create a mock service client."""
-    client = MagicMock()
-    client.wait_for_service.return_value = True
-    future = MagicMock()
-    client.call_async.return_value = future
-    return client
+class Manipulator:
+    """Serves ManipulatorMoveTo; answers from `outcomes` (then True), records requests."""
 
+    def __init__(self, service: str) -> None:
+        self.requests: List[Any] = []
+        self.outcomes: List[bool] = []
+        self.delay = 0.0
+        self.server = ROS2Connector(f"manipulator{service.replace('/', '_')}")
+        self.server.create_service(service, self.handle, service_type=ManipulatorMoveTo)
 
-@pytest.fixture
-def success_response():
-    """Create a successful ManipulatorMoveTo response."""
-    response = ManipulatorMoveTo.Response()
-    response.success = True
-    return response
+    def handle(self, request: Any, response: Any) -> Any:
+        time.sleep(self.delay)
+        self.requests.append(request)
+        response.success = self.outcomes.pop(0) if self.outcomes else True
+        return response
+
+    def position(self, i: int) -> tuple:
+        p = self.requests[i].target_pose.pose.position
+        return (round(p.x, 3), round(p.y, 3), round(p.z, 3))
+
+    def gripper(self, i: int) -> tuple:
+        r = self.requests[i]
+        return (r.initial_gripper_state, r.final_gripper_state)
 
 
 @pytest.fixture
-def failure_response():
-    """Create a failed ManipulatorMoveTo response."""
-    response = ManipulatorMoveTo.Response()
-    response.success = False
-    return response
+def arm(ros_setup: None):
+    service = f"/move_to_{uuid.uuid4().hex}"
+    manipulator = Manipulator(service)
+    connector = ROS2Connector()
+    kwargs = dict(connector=connector, manipulator_frame="base_link", service=service)
+    try:
+        yield manipulator, kwargs
+    finally:
+        connector.close()
+        manipulator.server.close()
 
 
-@pytest.fixture
-def identity_transform():
-    """Create an identity transform for testing."""
-    from geometry_msgs.msg import TransformStamped
-
-    transform = TransformStamped()
-    transform.transform.translation.x = 0.0
-    transform.transform.translation.y = 0.0
-    transform.transform.translation.z = 0.0
-    transform.transform.rotation.w = 1.0
-    return transform
-
-
-def setup_service_client(mock_connector, mock_service_client, available=True):
-    """Helper to set up service client on connector."""
-    mock_service_client.wait_for_service.return_value = available
-    mock_connector._node.create_client.return_value = mock_service_client
-    return mock_service_client
+@pytest.mark.parametrize(
+    "task,gripper,z", [("grab", (True, False), 0.3), ("drop", (False, True), 0.35)]
+)
+def test_move_to_point(arm, task, gripper, z) -> None:
+    manipulator, kwargs = arm
+    result = MoveToPointTool(**kwargs)._run(x=0.1, y=0.2, z=0.3, task=task)
+    assert "successfully positioned at coordinates (0.10, 0.20, 0.30)" in result
+    assert manipulator.gripper(0) == gripper
+    assert manipulator.position(0) == (0.1, 0.2, z)
+    assert manipulator.requests[0].target_pose.header.frame_id == "base_link"
 
 
-class TestMoveToPointTool:
-    """Test cases for MoveToPointTool."""
+def test_move_to_point_calibration_and_min_z(arm) -> None:
+    manipulator, kwargs = arm
+    tool = MoveToPointTool(**kwargs, calibration_x=0.01, calibration_y=0.02, min_z=0.2)
+    tool._run(x=0.1, y=0.2, z=0.05, task="grab")
+    assert manipulator.position(0) == (0.11, 0.22, 0.2)
 
-    @pytest.fixture
-    def tool(self, mock_connector):
-        """Create a MoveToPointTool instance."""
-        return MoveToPointTool(
-            connector=mock_connector,
-            manipulator_frame="base_link",
-        )
 
-    def test_service_not_available(self, tool, mock_connector, mock_service_client):
-        """Test behavior when service is not available."""
-        setup_service_client(mock_connector, mock_service_client, available=False)
+def test_move_to_point_failure(arm) -> None:
+    manipulator, kwargs = arm
+    manipulator.outcomes = [False]
+    result = MoveToPointTool(**kwargs)._run(x=0.1, y=0.2, z=0.3, task="grab")
+    assert result.startswith("Failed to position")
 
-        result = tool._run(x=0.1, y=0.2, z=0.3, task="grab")
 
-        assert "not available" in result
-        assert "/manipulator_move_to" in result
+def test_move_to_point_timeout(arm) -> None:
+    manipulator, kwargs = arm
+    manipulator.delay = 0.5
+    with pytest.raises(ToolException, match="ROS2TimeoutError"):
+        MoveToPointTool(**kwargs, timeout_sec=0.1)._run(x=0, y=0, z=0.3, task="grab")
 
-    def test_service_timeout(self, tool, mock_connector, mock_service_client):
-        """Test behavior when service call times out."""
-        setup_service_client(mock_connector, mock_service_client)
-        # Use shorter timeout for faster test execution
-        tool.timeout_sec = 0.5
 
-        with patch.object(custom, "get_future_result", return_value=None):
-            result = tool._run(x=0.1, y=0.2, z=0.3, task="grab")
-
-        assert "timed out" in result
-        assert all(coord in result for coord in ["0.10", "0.20", "0.30"])
-
-    def test_grab_task_success(
-        self, tool, mock_connector, mock_service_client, success_response
-    ):
-        """Test successful grab task."""
-        setup_service_client(mock_connector, mock_service_client)
-
-        with patch.object(custom, "get_future_result", return_value=success_response):
-            result = tool._run(x=0.1, y=0.2, z=0.3, task="grab")
-
-        assert "successfully positioned" in result
-        assert all(coord in result for coord in ["0.10", "0.20", "0.30"])
-        # Verify gripper states for grab
-        call_args = mock_service_client.call_async.call_args[0][0]
-        assert call_args.initial_gripper_state is True
-        assert call_args.final_gripper_state is False
-
-    def test_drop_task_success(
-        self, tool, mock_connector, mock_service_client, success_response
-    ):
-        """Test successful drop task."""
-        setup_service_client(mock_connector, mock_service_client)
-
-        tool.additional_height = 0.05
-        with patch.object(custom, "get_future_result", return_value=success_response):
-            result = tool._run(x=0.1, y=0.2, z=0.3, task="drop")
-
-        assert "successfully positioned" in result
-        # Verify gripper states for drop
-        call_args = mock_service_client.call_async.call_args[0][0]
-        assert call_args.initial_gripper_state is False
-        assert call_args.final_gripper_state is True
-        # Verify additional height was added
-        assert call_args.target_pose.pose.position.z == pytest.approx(
-            0.3 + 0.05, abs=0.01
-        )
-
-    def test_service_failure(
-        self, tool, mock_connector, mock_service_client, failure_response
-    ):
-        """Test behavior when service returns failure."""
-        setup_service_client(mock_connector, mock_service_client)
-
-        with patch.object(custom, "get_future_result", return_value=failure_response):
-            result = tool._run(x=0.1, y=0.2, z=0.3, task="grab")
-
-        assert "Failed to position" in result
-
-    def test_calibration_applied(
-        self, tool, mock_connector, mock_service_client, success_response
-    ):
-        """Test that calibration offsets are applied."""
-        setup_service_client(mock_connector, mock_service_client)
-
-        tool.calibration_x = 0.01
-        tool.calibration_y = 0.02
-        tool.calibration_z = 0.03
-
-        with patch.object(custom, "get_future_result", return_value=success_response):
+def test_service_not_available(ros_setup: None) -> None:
+    connector = ROS2Connector()
+    tool = MoveToPointTool(
+        connector=connector, manipulator_frame="base_link", service="/nobody_home"
+    )
+    try:
+        with pytest.raises(ToolException, match="/nobody_home"):
             tool._run(x=0.1, y=0.2, z=0.3, task="grab")
-
-        call_args = mock_service_client.call_async.call_args[0][0]
-        assert call_args.target_pose.pose.position.x == pytest.approx(0.11, abs=0.001)
-        assert call_args.target_pose.pose.position.y == pytest.approx(0.22, abs=0.001)
-        assert call_args.target_pose.pose.position.z == pytest.approx(0.33, abs=0.001)
-
-    def test_min_z_enforced(
-        self, tool, mock_connector, mock_service_client, success_response
-    ):
-        """Test that minimum z coordinate is enforced."""
-        setup_service_client(mock_connector, mock_service_client)
-
-        tool.min_z = 0.2
-
-        with patch(
-            "rai.tools.ros2.manipulation.custom.get_future_result",
-            return_value=success_response,
-        ):
-            tool._run(x=0.1, y=0.2, z=0.1, task="grab")
-
-        call_args = mock_service_client.call_async.call_args[0][0]
-        assert call_args.target_pose.pose.position.z >= 0.2
+    finally:
+        connector.close()
 
 
-class TestMoveObjectFromToTool:
-    """Test cases for MoveObjectFromToTool."""
-
-    @pytest.fixture
-    def tool(self, mock_connector):
-        """Create a MoveObjectFromToTool instance."""
-        return MoveObjectFromToTool(
-            connector=mock_connector,
-            manipulator_frame="base_link",
-        )
-
-    def test_service_not_available(self, tool, mock_connector, mock_service_client):
-        """Test behavior when service is not available."""
-        setup_service_client(mock_connector, mock_service_client, available=False)
-
-        result = tool._run(x=0.1, y=0.2, z=0.3, x1=0.4, y1=0.5, z1=0.6)
-
-        assert "not available" in result
-
-    def test_first_move_timeout(self, tool, mock_connector, mock_service_client):
-        """Test behavior when first move times out."""
-        setup_service_client(mock_connector, mock_service_client)
-        # Use shorter timeout for faster test execution
-        tool.timeout_sec = 0.5
-
-        with patch.object(custom, "get_future_result", return_value=None):
-            result = tool._run(x=0.1, y=0.2, z=0.3, x1=0.4, y1=0.5, z1=0.6)
-
-        assert "timed out" in result
-        assert "0.10" in result
-
-    def test_second_move_timeout(
-        self, tool, mock_connector, mock_service_client, success_response
-    ):
-        """Test behavior when second move times out."""
-        setup_service_client(mock_connector, mock_service_client)
-        # Use shorter timeout for faster test execution
-        tool.timeout_sec = 0.5
-
-        with patch.object(
-            custom,
-            "get_future_result",
-            side_effect=[success_response, None],
-        ):
-            result = tool._run(x=0.1, y=0.2, z=0.3, x1=0.4, y1=0.5, z1=0.6)
-
-        assert "timed out" in result
-        assert "0.40" in result
-
-    def test_first_move_failure(
-        self, tool, mock_connector, mock_service_client, failure_response
-    ):
-        """Test behavior when first move fails."""
-        setup_service_client(mock_connector, mock_service_client)
-
-        with patch.object(custom, "get_future_result", return_value=failure_response):
-            result = tool._run(x=0.1, y=0.2, z=0.3, x1=0.4, y1=0.5, z1=0.6)
-
-        assert "Failed to position" in result
-        assert "0.10" in result
-
-    def test_success(self, tool, mock_connector, mock_service_client, success_response):
-        """Test successful move from one point to another."""
-        setup_service_client(mock_connector, mock_service_client)
-
-        with (
-            patch.object(
-                custom,
-                "get_future_result",
-                side_effect=[success_response, success_response],
-            ),
-            patch.object(ResetArmTool, "_run", return_value="Arm successfully reset."),
-        ):
-            result = tool._run(x=0.1, y=0.2, z=0.3, x1=0.4, y1=0.5, z1=0.6)
-
-        assert "successfully positioned" in result
-        assert all(coord in result for coord in ["0.40", "0.50", "0.60"])
-        # Verify reset was called
-        assert mock_service_client.call_async.call_count == 2
-
-    def test_gripper_states(
-        self, tool, mock_connector, mock_service_client, success_response
-    ):
-        """Test that gripper states are set correctly for grab and drop."""
-        setup_service_client(mock_connector, mock_service_client)
-
-        with (
-            patch.object(
-                custom,
-                "get_future_result",
-                side_effect=[success_response, success_response],
-            ),
-            patch.object(ResetArmTool, "_run", return_value="Arm successfully reset."),
-        ):
-            tool._run(x=0.1, y=0.2, z=0.3, x1=0.4, y1=0.5, z1=0.6)
-
-        # First call: grab (open -> closed)
-        first_call = mock_service_client.call_async.call_args_list[0][0][0]
-        assert first_call.initial_gripper_state is True
-        assert first_call.final_gripper_state is False
-
-        # Second call: drop (closed -> open)
-        second_call = mock_service_client.call_async.call_args_list[1][0][0]
-        assert second_call.initial_gripper_state is False
-        assert second_call.final_gripper_state is True
+def test_move_object_from_to_picks_places_and_resets(arm) -> None:
+    manipulator, kwargs = arm
+    result = MoveObjectFromToTool(**kwargs)._run(
+        x=0.1, y=0.2, z=0.3, x1=0.4, y1=0.5, z1=0.6
+    )
+    assert "successfully positioned at coordinates (0.40, 0.50, 0.60)" in result
+    assert [manipulator.gripper(i) for i in range(3)] == [
+        (True, False),
+        (False, True),
+        (True, False),
+    ]
+    assert manipulator.position(0) == (0.1, 0.2, 0.4)  # calibration_z = 0.1
+    assert manipulator.position(2) == (0.31, 0.0, 0.59)
 
 
-class TestResetArmTool:
-    """Test cases for ResetArmTool."""
-
-    @pytest.fixture
-    def tool(self, mock_connector):
-        """Create a ResetArmTool instance."""
-        return ResetArmTool(
-            connector=mock_connector,
-            manipulator_frame="base_link",
-        )
-
-    def test_service_timeout(self, tool, mock_connector, mock_service_client):
-        """Test behavior when service call times out."""
-        setup_service_client(mock_connector, mock_service_client)
-        # Note: ResetArmTool uses hardcoded 5.0s timeout, but patch should make it return immediately
-
-        with patch.object(custom, "get_future_result", return_value=None):
-            result = tool._run()
-
-        assert "Failed to reset" in result
-
-    def test_success(self, tool, mock_connector, mock_service_client, success_response):
-        """Test successful arm reset."""
-        setup_service_client(mock_connector, mock_service_client)
-
-        with patch.object(custom, "get_future_result", return_value=success_response):
-            result = tool._run()
-
-        assert "Arm successfully reset" in result
-        call_args = mock_service_client.call_async.call_args[0][0]
-        assert call_args.target_pose.pose.position.x == 0.31
-        assert call_args.target_pose.pose.position.y == 0.0
-        assert call_args.target_pose.pose.position.z == 0.59
-
-    def test_failure(self, tool, mock_connector, mock_service_client, failure_response):
-        """Test behavior when reset fails."""
-        setup_service_client(mock_connector, mock_service_client)
-
-        with patch.object(custom, "get_future_result", return_value=failure_response):
-            result = tool._run()
-
-        assert "Failed to reset" in result
+def test_move_object_from_to_first_move_fails(arm) -> None:
+    manipulator, kwargs = arm
+    manipulator.outcomes = [False]
+    result = MoveObjectFromToTool(**kwargs)._run(
+        x=0.1, y=0.2, z=0.3, x1=0.4, y1=0.5, z1=0.6
+    )
+    assert result.startswith("Failed to position end effector at coordinates (0.10")
+    assert len(manipulator.requests) == 1
 
 
-class TestGetObjectPositionsTool:
-    """Test cases for GetObjectPositionsTool."""
+def test_move_object_from_to_resets_after_failed_place(arm) -> None:
+    manipulator, kwargs = arm
+    manipulator.outcomes = [True, False]
+    result = MoveObjectFromToTool(**kwargs)._run(
+        x=0.1, y=0.2, z=0.3, x1=0.4, y1=0.5, z1=0.6
+    )
+    assert result.startswith("Failed to position end effector at coordinates (0.40")
+    assert manipulator.position(2) == (0.31, 0.0, 0.59)
 
-    @pytest.fixture
-    def mock_get_grabbing_point_tool(self):
-        """Create a mock GetGrabbingPointTool."""
-        tool = MagicMock()
-        return tool
 
-    @pytest.fixture
-    def tool(self, mock_connector, mock_get_grabbing_point_tool):
-        """Create a GetObjectPositionsTool instance."""
-        # Use model_construct to bypass Pydantic validation for the mock tool
-        return GetObjectPositionsTool.model_construct(
-            connector=mock_connector,
-            target_frame="base_link",
-            source_frame="camera_link",
-            camera_topic="/camera/rgb/image_raw",
-            depth_topic="/camera/depth/image_raw",
-            camera_info_topic="/camera/rgb/camera_info",
-            get_grabbing_point_tool=mock_get_grabbing_point_tool,
-        )
+@pytest.mark.parametrize(
+    "success,text",
+    [(True, "Arm successfully reset."), (False, "Failed to reset the arm.")],
+)
+def test_reset_arm(arm, success, text) -> None:
+    manipulator, kwargs = arm
+    manipulator.outcomes = [success]
+    assert ResetArmTool(**kwargs)._run() == text
+    assert manipulator.position(0) == (0.31, 0.0, 0.59)
 
-    def test_no_objects_detected(
-        self, tool, mock_connector, mock_get_grabbing_point_tool, identity_transform
-    ):
-        """Test behavior when no objects are detected."""
-        mock_get_grabbing_point_tool._run.return_value = []
-        mock_connector.get_transform.return_value = identity_transform
 
-        result = tool._run("cup")
-
-        assert "No cups detected" in result
-
-    def test_objects_detected(
-        self, tool, mock_connector, mock_get_grabbing_point_tool, identity_transform
-    ):
-        """Test successful object detection and position calculation."""
-        # Mock grabbing point tool to return camera frame positions
-        mock_get_grabbing_point_tool._run.return_value = [
-            ([0.1, 0.2, 0.3], None),  # (camera_pose, other_data)
-            ([0.4, 0.5, 0.6], None),
-        ]
-        mock_connector.get_transform.return_value = identity_transform
-
-        result = tool._run("cup")
-
-        assert "Centroids of detected cups" in result
-        assert "base_link" in result
-        assert "Centroid" in result
-        # Verify grabbing point tool was called with correct parameters
-        mock_get_grabbing_point_tool._run.assert_called_once_with(
-            camera_topic="/camera/rgb/image_raw",
-            depth_topic="/camera/depth/image_raw",
-            camera_info_topic="/camera/rgb/camera_info",
-            object_name="cup",
-        )
+@pytest.mark.parametrize(
+    "points,expected",
+    [
+        ([], "No cups detected."),
+        (
+            [([0.5, 0.0, 0.1],), ([0.1, 0.2, 0.3],)],
+            "Centroids of detected cups in base_link frame: "
+            "[Centroid(x=1.10, y=0.20, z=0.30), Centroid(x=1.50, y=0.00, z=0.10)]",
+        ),
+    ],
+)
+def test_get_object_positions(points, expected) -> None:
+    connector = MagicMock(spec=ROS2Connector)
+    transform = TransformStamped()
+    transform.transform.translation.x = 1.0
+    transform.transform.rotation.w = 1.0
+    connector.transform = AsyncMock(return_value=transform)
+    grabbing = MagicMock(spec=BaseTool)
+    grabbing._run.return_value = points
+    tool = GetObjectPositionsTool(
+        connector=connector,
+        target_frame="base_link",
+        source_frame="camera",
+        camera_topic="/rgb",
+        depth_topic="/depth",
+        camera_info_topic="/info",
+        get_grabbing_point_tool=grabbing,
+    )
+    assert tool._run(object_name="cup").startswith(expected)
+    grabbing._run.assert_called_once_with(
+        camera_topic="/rgb",
+        depth_topic="/depth",
+        camera_info_topic="/info",
+        object_name="cup",
+    )
