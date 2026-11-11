@@ -38,15 +38,13 @@ class ROS2EmbodimentInfoAgent(SyncAgent):
         self.embodiment_info = EmbodimentInfo.from_directory(self.root_dir)
 
         self.connector.create_service(
-            service_name=self.service_name,
-            service_type="rai_interfaces/srv/EmbodimentInfo",
-            on_request=self.service_callback,
+            service_name, self.handle_request, service_type=EmbodimentInfoSrv
         )
         self.logger.info(
             f"Embodiment info agent initialized with service name {service_name}"
         )
 
-    def service_callback(
+    def handle_request(
         self, request: EmbodimentInfoSrv.Request, response: EmbodimentInfoSrv.Response
     ):
         self.logger.info(f"Received request: {request}")
@@ -59,4 +57,4 @@ class ROS2EmbodimentInfoAgent(SyncAgent):
         return response
 
     def teardown(self):
-        self.connector.shutdown()
+        self.connector.close()

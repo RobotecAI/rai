@@ -32,7 +32,7 @@ from rai_whoami.agents.ros2 import vector_store_retrieval_agent
         pytest.param([], id="empty"),
     ],
 )
-def test_service_callback_serializes_scores(scores, tmp_path):
+def test_handle_request_serializes_scores(scores, tmp_path):
     documents = [
         Document(page_content=f"Document {index}") for index in range(len(scores))
     ]
@@ -54,7 +54,7 @@ def test_service_callback_serializes_scores(scores, tmp_path):
         else:
             response = VectorStoreRetrieval.Response()
 
-        result = agent.service_callback(request, response)
+        result = agent.handle_request(request, response)
 
     assert result is response
     assert response.success is True

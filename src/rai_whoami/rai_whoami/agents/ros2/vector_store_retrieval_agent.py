@@ -51,15 +51,13 @@ class ROS2VectorStoreRetrievalAgent(SyncAgent):
         )
 
         self.connector.create_service(
-            service_name=service_name,
-            service_type="rai_interfaces/srv/VectorStoreRetrieval",
-            on_request=self.service_callback,
+            service_name, self.handle_request, service_type=VectorStoreRetrieval
         )
         self.logger.info(
             f"Vector store retrieval agent initialized with service name {service_name}"
         )
 
-    def service_callback(
+    def handle_request(
         self,
         request: VectorStoreRetrieval.Request,
         response: VectorStoreRetrieval.Response,
@@ -76,4 +74,4 @@ class ROS2VectorStoreRetrievalAgent(SyncAgent):
         return response
 
     def teardown(self):
-        self.connector.shutdown()
+        self.connector.close()
