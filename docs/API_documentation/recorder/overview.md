@@ -73,6 +73,8 @@ twists = rec.values("/cmd_vel")  # ROS messages, decoded with the recorded schem
 
 `Recording.messages(topics)` returns `RecordedMessage`s in time order. `restore(value)` puts the base64 data back in place of the media tokens.
 
+To re-run a recorded session offline, or to play its topics into a ROS graph, see [Record and replay](../replay/overview.md).
+
 ::: rai.recorder.FlightRecorder
 
 ::: rai.recorder.Recording
