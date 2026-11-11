@@ -394,7 +394,7 @@ def get_tracing_callbacks(
         Langfuse(
             public_key=public_key,
             secret_key=secret_key,
-            host=config.tracing.langfuse.host,
+            base_url=config.tracing.langfuse.host,
         )
 
         # Create callback handler (uses the configured singleton client)

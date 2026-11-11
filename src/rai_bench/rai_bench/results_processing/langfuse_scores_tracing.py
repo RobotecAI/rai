@@ -17,6 +17,7 @@ from uuid import UUID
 
 from langchain_core.callbacks.base import BaseCallbackHandler
 from langchain_core.tracers.langchain import LangChainTracer
+from langfuse import get_client
 from langfuse.langchain import CallbackHandler
 from rai.initialization import get_tracing_callbacks
 
@@ -45,8 +46,11 @@ class ScoreTracingHandler:
             else ""
         )
         if isinstance(callback, CallbackHandler):
-            callback.langfuse.score(
-                trace_id=str(run_id),
+            # Langfuse traces use OpenTelemetry ids, not the LangChain run id.
+            if callback.last_trace_id is None:
+                return None
+            get_client().create_score(
+                trace_id=callback.last_trace_id,
                 name="result",
                 value=score,
                 comment=comment,
