@@ -39,6 +39,17 @@ class ROS2ServiceError(Exception):
         super().__init__(message)
 
 
+class ROS2TimeoutError(TimeoutError):
+    """A ROS 2 wait (service, goal, result, cancel, message) timed out.
+
+    The same exception on Jazzy and Lyrical, whose rclpy calls differ.
+    """
+
+
+class ROS2GoalRejectedError(RuntimeError):
+    """The action server rejected the goal."""
+
+
 class ROS2ParameterError(Exception):
     """Exception raised for ROS2 parameter-related errors."""
 

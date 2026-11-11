@@ -37,6 +37,10 @@ class ConnectorException(Exception):
     pass
 
 
+class ConnectorClosedError(ConnectorException):
+    """The connector is closed, or was closed while the call was waiting."""
+
+
 class BaseMessage(BaseModel):
     """Base class for all messages in the connector system.
 
