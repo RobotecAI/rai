@@ -141,7 +141,7 @@ class TestO3DExROS2Bridge(unittest.TestCase):
         self.bridge.launch_robotic_stack(required_interfaces, mock_launch_description)
 
         self.mock_launch_manager.start.assert_called_once_with(
-            launch_description=mock_launch_description
+            launch_description=mock_launch_description, domain_id=None
         )
         self.bridge._is_ros2_stack_ready.assert_called_once_with(
             required_ros2_stack=required_interfaces
@@ -166,7 +166,7 @@ class TestO3DExROS2Bridge(unittest.TestCase):
 
         self.bridge._launch_binary(self.test_config)
 
-        mock_popen.assert_called_once_with(["/path/to/binary"])
+        mock_popen.assert_called_once_with(["/path/to/binary"], env=unittest.mock.ANY)
 
         self.assertEqual(self.bridge.current_sim_process, mock_process)
 
